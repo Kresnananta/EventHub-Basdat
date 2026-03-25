@@ -18,9 +18,9 @@ export function Header() {
           </button>
           <button className="relative hover:text-primary transition-colors">
             <Bell size={20} />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white ring-2 ring-white">
+            {/* <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white ring-2 ring-white">
               !
-            </span>
+            </span> */}
           </button>
         </div>
 

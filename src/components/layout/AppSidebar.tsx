@@ -33,10 +33,10 @@ export function AppSidebar() {
           <div className="bg-white text-primary rounded-md p-1.5 shadow-sm font-bold flex items-center justify-center">
             <Ticket size={24} />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-white">EventHub</span>
+          <span className="text-2xl font-bold tracking-tight">EventHub</span>
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent className="px-2 mt-4 space-y-6">
         <SidebarGroup>
           <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Main Menu</SidebarGroupLabel>
@@ -55,7 +55,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Event Tools</SidebarGroupLabel>
           <SidebarGroupContent>
