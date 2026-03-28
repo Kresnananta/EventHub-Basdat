@@ -10,12 +10,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 
 const menuItems = [
-  { title: "Dashboard", url: "#", icon: LayoutDashboard },
-  { title: "Tickets", url: "#", icon: Ticket },
-  { title: "Orders", url: "#", icon: ShoppingCart },
-  { title: "Attendees", url: "#", icon: Users },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Tickets", url: "/dashboard/tickets", icon: Ticket },
+  { title: "Orders", url: "/dashboard/orders", icon: ShoppingCart },
+  { title: "Attendees", url: "/dashboard/attendees", icon: Users },
 ]
 
 const eventTools = [
@@ -25,6 +26,8 @@ const eventTools = [
 ]
 
 export function AppSidebar() {
+  const location = useLocation();
+
   return (
     <Sidebar variant="sidebar" className="border-r-0 bg-primary! text-primary-foreground dark">
       <SidebarHeader className="p-4 border-b border-white/10">
@@ -42,16 +45,27 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Main Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200">
-                    <a href={item.url} className="flex items-center gap-3">
-                      <item.icon size={20} />
-                      <span className="font-medium text-[15px]">{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item) => {
+                const isActive = location.pathname === item.url;
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={`h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200 ${isActive
+                        ? "bg-white/20 text-white font-bold"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                    >
+                      <Link to={item.url} className="flex items-center gap-3">
+                        <item.icon size={20} />
+                        <span className="font-medium text-[15px]">{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -60,16 +74,27 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Event Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {eventTools.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200">
-                    <a href={item.url} className="flex items-center gap-3">
-                      <item.icon size={20} />
-                      <span className="font-medium text-[15px]">{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {eventTools.map((item) => {
+                const isActive = location.pathname === item.url;
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={`h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200 ${isActive
+                        ? "bg-white/20 text-white font-bold"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                        }`}
+                    >
+                      <Link to={item.url} className="flex items-center gap-3">
+                        <item.icon size={20} />
+                        <span className="font-medium text-[15px]">{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
