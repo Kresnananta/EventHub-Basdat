@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Plus, MoreHorizontal } from "lucide-react"
 
 const ticketTiers = [
-    { id: "T-001", name: "VIP Seating", price: "Rp 1,500,000", capacity: 100, sold: 85, status: "Selling Fast" },
-    { id: "T-002", name: "Festival (Standing)", price: "Rp 750,000", capacity: 500, sold: 420, status: "Available" },
-    { id: "T-003", name: "Early Bird", price: "Rp 500,000", capacity: 200, sold: 200, status: "Sold Out" },
-    { id: "T-004", name: "Meet & Greet Add-on", price: "Rp 2,500,000", capacity: 50, sold: 48, status: "Selling Fast" },
+    { id: "T-001", eventName: "Google I/O 2026", name: "VIP Seating", price: "Rp 1,500K", capacity: 100, sold: 85, status: "Selling Fast" },
+    { id: "T-002", eventName: "Google I/O 2026", name: "Festival (Standing)", price: "Rp 750K", capacity: 500, sold: 420, status: "Available" },
+    { id: "T-003", eventName: "Tech Startup Conference", name: "Early Bird", price: "Rp 500K", capacity: 200, sold: 200, status: "Sold Out" },
+    { id: "T-004", eventName: "Tech Startup Conference", name: "Reguler", price: "Rp 750K", capacity: 500, sold: 48, status: "Available" },
 ]
 
 export function Tickets() {
@@ -34,6 +34,7 @@ export function Tickets() {
                         <TableHeader>
                             <TableRow className="border-border/50">
                                 <TableHead>Nama Tiket</TableHead>
+                                <TableHead>Event</TableHead>
                                 <TableHead>Harga</TableHead>
                                 <TableHead className="text-center">Kapasitas</TableHead>
                                 <TableHead className="text-center">Terjual</TableHead>
@@ -45,6 +46,7 @@ export function Tickets() {
                             {ticketTiers.map((ticket) => (
                                 <TableRow key={ticket.id} className="border-border/50 hover:bg-muted/30">
                                     <TableCell className="font-medium text-foreground">{ticket.name}</TableCell>
+                                    <TableCell className="text-muted-foreground">{ticket.eventName}</TableCell>
                                     <TableCell>{ticket.price}</TableCell>
                                     <TableCell className="text-center">{ticket.capacity}</TableCell>
                                     <TableCell className="text-center font-semibold text-primary">{ticket.sold}</TableCell>

@@ -3,6 +3,7 @@ import { DashboardLayout } from "./components/layout/DashboardLayout"
 import { Dashboard } from "./pages/Dashboard"
 import { Landing } from "./pages/Landing"
 import { Tickets } from './pages/Tickets'
+import { Orders } from './pages/Orders'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path='/dashboard' element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
           <Route path='tickets' element={<Tickets />} />
+          <Route path='orders' element={<Orders />} />
         </Route>
 
         <Route path='*' element={<Navigate to='/' replace />} />

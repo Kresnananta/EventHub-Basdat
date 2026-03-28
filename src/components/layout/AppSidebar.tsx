@@ -1,3 +1,4 @@
+import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -9,8 +10,16 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown } from "lucide-react"
+
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -37,6 +46,33 @@ export function AppSidebar() {
             <Ticket size={24} />
           </div>
           <span className="text-2xl font-bold tracking-tight">EventHub</span>
+        </div>
+
+        <div className="mt-4 px-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center justify-between px-3 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white font-medium transition-colors border border-white/10">
+                <span className="truncate">All Event</span>
+                <ChevronsUpDown size={16} className="text-white/60 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            {/* Menu Pilihan yang akan muncul */}
+            <DropdownMenuContent className="w-56" align="start">
+              <DropdownMenuLabel>Choose Event</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              {/* Placeholder Data Dummy */}
+              <DropdownMenuItem className="font-bold text-primary bg-primary/5 cursor-pointer">
+                All Event
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                Google I/O 2026
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                Tech Startup Conference
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </SidebarHeader>
 
