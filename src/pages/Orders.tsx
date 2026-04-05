@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Filter, FileDown } from "lucide-react"
 
-const orders = [
+const dummyOrders = [
   { id: "ORD-1234", customer: "Warren Buffet", email: "warren@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 3,000,000", status: "Completed", date: "Today, 10:24 AM" },
   { id: "ORD-1235", customer: "Rusdi", email: "rusdi@example.com", event: "Google I/O 2026", tickets: 1, total: "Rp 750,000", status: "Pending", date: "Today, 09:15 AM" },
   { id: "ORD-1236", customer: "Jerome Polin", email: "jerome@example.com", event: "Tech Startup Conference", tickets: 4, total: "Rp 3,000,000", status: "Completed", date: "Yesterday" },
@@ -15,6 +16,18 @@ const orders = [
 ]
 
 export function Orders() {
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const filteredOrders = dummyOrders.filter((order) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      order.id.toLowerCase().includes(query) ||
+      order.customer.toLowerCase().includes(query) ||
+      order.email.toLowerCase().includes(query)
+    )
+  })
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       {/* header */}
@@ -48,6 +61,8 @@ export function Orders() {
                   type="search"
                   placeholder="Search ID, Email, or Name"
                   className="w-full pl-8 bg-slate-50 border-border/50 focus-visible:ring-primary/50"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button variant="outline" size="icon" className="shrink-0 bg-white">
@@ -70,30 +85,38 @@ export function Orders() {
               </TableRow>
             </TableHeader>
             <TableBody className="pointer-events-auto">
-              {orders.map((order) => (
-                <TableRow key={order.id} className="border-border/50 hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-semibold text-primary cursor-pointer hover:underline">{order.id}</TableCell>
-                  <TableCell>
-                    <div className="font-semibold text-foreground">{order.customer}</div>
-                    <div className="text-xs text-muted-foreground">{order.email}</div>
+              {filteredOrders.length > 0 ? (
+                filteredOrders.map((order) => (
+                  <TableRow key={order.id} className="border-border/50 hover:bg-muted/30 transition-colors">
+                    <TableCell className="font-semibold text-primary cursor-pointer hover:underline">{order.id}</TableCell>
+                    <TableCell>
+                      <div className="font-semibold text-foreground">{order.customer}</div>
+                      <div className="text-xs text-muted-foreground">{order.email}</div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{order.event}</TableCell>
+                    <TableCell className="text-center font-medium">{order.tickets}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={order.status === "Completed" ? "default" : order.status === "Pending" ? "secondary" : "destructive"}
+                        className={
+                          order.status === "Completed" ? "bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-none" :
+                            order.status === "Pending" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-none border-none" :
+                              "bg-red-100 text-red-800 hover:bg-red-200 shadow-none border-none"
+                        }
+                      >
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{order.total}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground font-medium">
+                    Order "{searchQuery}" not found
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{order.event}</TableCell>
-                  <TableCell className="text-center font-medium">{order.tickets}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={order.status === "Completed" ? "default" : order.status === "Pending" ? "secondary" : "destructive"}
-                      className={
-                        order.status === "Completed" ? "bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-none" :
-                          order.status === "Pending" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-none border-none" :
-                            "bg-red-100 text-red-800 hover:bg-red-200 shadow-none border-none"
-                      }
-                    >
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">{order.total}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>

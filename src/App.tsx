@@ -4,6 +4,7 @@ import { Dashboard } from "./pages/Dashboard"
 import { Landing } from "./pages/Landing"
 import { Tickets } from './pages/Tickets'
 import { Orders } from './pages/Orders'
+import { Attendees } from './pages/Attendees'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path='tickets' element={<Tickets />} />
           <Route path='orders' element={<Orders />} />
+          <Route path='attendees' element={<Attendees />} />
         </Route>
 
         <Route path='*' element={<Navigate to='/' replace />} />
