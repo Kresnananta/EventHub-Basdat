@@ -33,7 +33,7 @@ const events: Event[] = [
     description: "Network with innovative startup founders, investors, and tech entrepreneurs from around the world.",
     date: "June 10-11, 2026",
     location: "San Francisco, California",
-    image: "https://images.unsplash.com/photo-1540575467063-178f50002cfe?w=500&h=300&fit=crop",
+    image: "https://images.unsplash.com/photo-1560439514-4e9645039924?q=80&w=1170&auto=format&fit=crop",
     attendees: 5000,
     ticketsSold: 248
   },
@@ -43,7 +43,7 @@ const events: Event[] = [
     description: "Learn the latest web design trends and best practices from industry experts.",
     date: "July 5-7, 2026",
     location: "New York, New York",
-    image: "https://images.unsplash.com/photo-1578762336691-f8e9c6d5b5c6?w=500&h=300&fit=crop",
+    image: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=1112&auto=format&fit=crop",
     attendees: 3000,
     ticketsSold: 156
   },
@@ -53,7 +53,7 @@ const events: Event[] = [
     description: "Explore cutting-edge AI technologies and their real-world applications.",
     date: "August 15-17, 2026",
     location: "Boston, Massachusetts",
-    image: "https://images.unsplash.com/photo-1591453089816-0fbb47977e18?w=500&h=300&fit=crop",
+    image: "https://images.unsplash.com/photo-1582192730841-2a682d7375f9?q=80&w=1074&auto=format&fit=crop",
     attendees: 8000,
     ticketsSold: 420
   },
@@ -67,7 +67,7 @@ export function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex flex-col">
       {/* Navbar */}
       <Navbar />
 
@@ -85,15 +85,15 @@ export function Landing() {
         {/* Events Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 animate-in fade-in duration-500 delay-100">
           {events.map((event) => (
-            <Card 
+            <Card
               key={event.id}
               className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
               onClick={() => handleEventClick(event.id)}
             >
               {/* Event Image */}
               <div className="relative h-48 overflow-hidden bg-muted">
-                <img 
-                  src={event.image} 
+                <img
+                  src={event.image}
                   alt={event.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -127,7 +127,7 @@ export function Landing() {
                 </div>
 
                 {/* CTA Button */}
-                <Button 
+                <Button
                   className="w-full gap-2 font-medium shadow-sm"
                   onClick={(e) => {
                     e.stopPropagation()
