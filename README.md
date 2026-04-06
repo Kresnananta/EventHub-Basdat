@@ -4,6 +4,8 @@ EventHub adalah platform modern berbasis web untuk merencanakan acara, mengelola
 
 Proyek ini dikembangkan untuk memenuhi tugas mata kuliah **Basis Data** yang diampu oleh `Arta Kusuma Hernanda, S.T., M.T`.
 
+Link Studi Kasus: **[Click Me](https://github.com/partadox/praktikum-mysql-case/blob/main/kelompok12_ticketing_b.md)**
+
 Untuk panduan kolaborasi tim, pembagian *jobdesk*, dan struktur folder, silakan baca file **[CONTRIBUTE.md](./CONTRIBUTE.md)**.
 
 ## Anggota (Kelompok 12)
@@ -26,11 +28,11 @@ Saat ini proyek sedang dalam tahap pengembangan.
 - [x] **Halaman Orders (`Orders.tsx`):** Direktori riwayat pesanan/pembelian seluruh pengguna dengan fitur spesifik *Client-Side Search* (Pencarian ID Order, Nama, dan Email).
 - [x] **Halaman Attendees (`Attendees.tsx`):** Portal untuk tim pintu acara memvalidasi pengunjung secara manual (*Check-In*) menggunakan fitur pencarian tiket.
 - [x] **Setup Supabase:** Inisiasi `supabase-js`, `database.types.ts`, dan *environment variables*.
-
-**Fokus Selanjutnya:**
-- [ ] Membangun UI Sisi Pengunjung / Pembeli (Landing Page, Halaman Pencarian Event, dan Detail Acara).
+- [X] Membangun UI Sisi Pengunjung / Pembeli (Landing Page, Halaman Pencarian Event, dan Detail Acara).  
+**Fokus Selanjutnya:** 
 - [ ] Integrasi rute Halaman *Checkout* dan Keranjang (*Cart*).
 - [ ] Menyambungkan Data Aktual (*Data Fetching*) ke Supabase untuk menggantikan data-data tiruan (*dummy*) di Dashboard.
+- [ ] Membuat sistem autentikasi (login).
 
 ---
 *Laporan ini akan diperbarui seiring berjalannya pengembangan proyek.*

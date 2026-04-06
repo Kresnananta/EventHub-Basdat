@@ -6,6 +6,17 @@ import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { getBookings, deleteBooking, type BookingItem } from "@/lib/bookings"
 import { Trash2, Calendar, Mail, Phone, User, DollarSign } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export function YourEvents() {
   const [bookings, setBookings] = useState<BookingItem[]>([])
@@ -19,10 +30,8 @@ export function YourEvents() {
   }, [])
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this booking?')) {
-      if (deleteBooking(id)) {
-        setBookings(bookings.filter(b => b.id !== id))
-      }
+    if (deleteBooking(id)) {
+      setBookings(bookings.filter(b => b.id !== id))
     }
   }
 
@@ -37,7 +46,7 @@ export function YourEvents() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex flex-col">
       {/* Navbar */}
       <Navbar />
 
@@ -62,7 +71,7 @@ export function YourEvents() {
               <p className="text-lg text-muted-foreground mb-4">
                 You don't have any event bookings yet.
               </p>
-              <Button 
+              <Button
                 onClick={() => window.location.href = '/'}
                 className="gap-2"
               >
@@ -73,7 +82,7 @@ export function YourEvents() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
             {bookings.map((booking) => (
-              <Card 
+              <Card
                 key={booking.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow border-border/50 flex flex-col"
               >
@@ -86,14 +95,14 @@ export function YourEvents() {
                         Booking ID: {booking.id}
                       </CardDescription>
                     </div>
-                    <Badge 
+                    <Badge
                       variant="default"
                       className={
-                        booking.status === 'confirmed' 
-                          ? 'bg-green-500 hover:bg-green-600' 
+                        booking.status === 'confirmed'
+                          ? 'bg-green-500 hover:bg-green-600'
                           : booking.status === 'pending'
-                          ? 'bg-yellow-500 hover:bg-yellow-600'
-                          : 'bg-red-500 hover:bg-red-600'
+                            ? 'bg-yellow-500 hover:bg-yellow-600'
+                            : 'bg-red-500 hover:bg-red-600'
                       }
                     >
                       {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
@@ -139,7 +148,7 @@ export function YourEvents() {
 
                 {/* Footer */}
                 <div className="border-t border-border/50 p-3 flex gap-2">
-                  <Button 
+                  <Button
                     variant="outline"
                     className="flex-1"
                     size="sm"
@@ -147,13 +156,32 @@ export function YourEvents() {
                     <DollarSign size={16} />
                     View Invoice
                   </Button>
-                  <Button 
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(booking.id)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 size={16} />
+                      </Button>
+                    </AlertDialogTrigger>
+
+                    {/* Pop up ditengah */}
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your booking.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(booking.id)}
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                        >
+                          Yes, Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </Card>
             ))}

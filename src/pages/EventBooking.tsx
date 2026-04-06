@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { ArrowLeft, Check } from "lucide-react"
+import { ArrowLeft, Check, Loader2 } from "lucide-react"
 import { addBooking } from "@/lib/bookings"
 
 interface BookingData {
@@ -57,6 +57,7 @@ export function EventBooking() {
     phone: '',
     quantity: 1
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const event = eventId ? eventData[eventId] : null
   const ticket = event && ticketTypeId ? event.tickets[ticketTypeId] : null
@@ -70,7 +71,7 @@ export function EventBooking() {
             <CardDescription>The booking information is invalid.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
+            <Button
               onClick={() => navigate('/')}
               className="w-full gap-2"
             >
@@ -88,43 +89,62 @@ export function EventBooking() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     if (name === 'quantity') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: Math.max(1, Math.min(10, parseInt(value) || 1))
-      }))
+      if (value === "") {
+        setFormData(prev => ({
+          ...prev,
+          [name]: "" as any
+        }));
+        return;
+      }
+
+      const parsedValue = parseInt(value);
+      if (!isNaN(parsedValue)) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: Math.min(10, parsedValue)
+        }));
+      }
+
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: value
-      }))
+      }));
     }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (formData.firstName && formData.lastName && formData.email && formData.phone) {
-      // Save booking to storage
-      const booking = addBooking({
-        eventId: eventId || 'E-000',
-        eventName: event.name,
-        ticketTypeId: ticketTypeId || 'T-000',
-        ticketName: ticket.name,
-        ticketPrice: ticket.price,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        quantity: formData.quantity,
-        totalPrice
-      })
-      console.log('Booking created:', booking)
-      setStep('confirmation')
+
+      setIsSubmitting(true)
+
+      setTimeout(() => {
+        // Save booking to storage
+        const booking = addBooking({
+          eventId: eventId || 'E-000',
+          eventName: event.name,
+          ticketTypeId: ticketTypeId || 'T-000',
+          ticketName: ticket.name,
+          ticketPrice: ticket.price,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+
+          // Fallback if user form not filled
+          quantity: Number(formData.quantity) || 1,
+          totalPrice
+        });
+        console.log('Booking created:', booking);
+        setStep('confirmation');
+      }, 1500) // simulate network delay 1.5s
     }
   }
 
   if (step === 'confirmation') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex flex-col">
         {/* Navbar */}
         <Navbar />
 
@@ -137,7 +157,7 @@ export function EventBooking() {
                   <Check className="w-8 h-8 text-green-600" />
                 </div>
               </div>
-              
+
               <div>
                 <h2 className="text-3xl font-bold text-foreground mb-2">Booking Confirmed!</h2>
                 <p className="text-muted-foreground">Your ticket booking has been successfully completed.</p>
@@ -197,14 +217,14 @@ export function EventBooking() {
                   A confirmation email has been sent to <strong>{formData.email}</strong>. Please check your inbox for your ticket details.
                 </p>
                 <div className="flex gap-3">
-                  <Button 
+                  <Button
                     onClick={() => navigate('/your-events')}
                     variant="outline"
                     className="flex-1"
                   >
                     View Your Bookings
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/')}
                     className="flex-1"
                   >
@@ -223,7 +243,7 @@ export function EventBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex flex-col">
       {/* Navbar */}
       <Navbar />
 
@@ -239,7 +259,7 @@ export function EventBooking() {
           {/* Main Card */}
           <div className="grid gap-6 md:grid-cols-3">
             {/* Form */}
-            <Card className="md:col-span-2 border-border/50">
+            <Card className="md:col-span-2 border-border/50 pointer-events-auto">
               <CardHeader>
                 <CardTitle>Attendee Information</CardTitle>
                 <CardDescription>Please provide your details for the booking</CardDescription>
@@ -271,7 +291,7 @@ export function EventBooking() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-1">
                     <label className="text-sm font-medium text-foreground">Email *</label>
                     <Input
                       name="email"
@@ -280,8 +300,11 @@ export function EventBooking() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="border-border/50"
+                      className="border-border/50 invalid:focus:ring-red-400 peer"
                     />
+                    <p className="text-xs text-red-500 invisible peer-[:not(:placeholder-shown):invalid]:visible">
+                      Please enter a valid email address
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -311,11 +334,19 @@ export function EventBooking() {
                     <p className="text-xs text-muted-foreground">Maximum 10 tickets per booking</p>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full font-medium shadow-sm mt-6"
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full font-medium shadow-sm mt-6 cursor-pointer"
                   >
-                    Proceed to Payment
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Proceed to Payment"
+                    )}
                   </Button>
                 </form>
               </CardContent>
