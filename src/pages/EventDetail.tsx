@@ -38,7 +38,7 @@ const eventDetails: Record<string, EventDetails> = {
     fullDescription: "Google I/O 2026 is our annual developer conference where we showcase the latest innovations and technologies from Google. Featuring keynote presentations, hands-on workshops, networking opportunities, and more. This year we're exploring AI, cloud computing, and the future of computing.",
     date: "May 24-26, 2026",
     location: "Mountain View, California",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537954/img1_giajpq.jpg",
     attendees: 12500,
     ticketsSold: 505,
     ticketTypes: [
@@ -53,7 +53,7 @@ const eventDetails: Record<string, EventDetails> = {
     fullDescription: "Meet the brightest minds in the startup ecosystem. This conference brings together founders, investors, mentors, and innovators to share experiences, discuss trends, and build connections. Learn from success stories and navigate the challenges of building a startup.",
     date: "June 10-11, 2026",
     location: "San Francisco, California",
-    image: "https://images.unsplash.com/photo-1560439514-4e9645039924?q=80&w=1170&auto=format&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537961/img2_oum3as.jpg",
     attendees: 5000,
     ticketsSold: 248,
     ticketTypes: [
@@ -68,7 +68,7 @@ const eventDetails: Record<string, EventDetails> = {
     fullDescription: "Discover the latest trends in web design, UX/UI principles, and responsive design techniques. Our expert speakers will share insights on creating beautiful, functional, and accessible web experiences that engage users.",
     date: "July 5-7, 2026",
     location: "New York, New York",
-    image: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=1112&auto=format&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537962/img3_xhenrg.jpg",
     attendees: 3000,
     ticketsSold: 156,
     ticketTypes: [
@@ -82,7 +82,7 @@ const eventDetails: Record<string, EventDetails> = {
     fullDescription: "Experience the future of AI and Machine Learning. This expo features live demonstrations, workshops, and talks from leading AI researchers and industry practitioners. Learn how AI is transforming businesses across different sectors.",
     date: "August 15-17, 2026",
     location: "Boston, Massachusetts",
-    image: "https://images.unsplash.com/photo-1582192730841-2a682d7375f9?q=80&w=1074&auto=format&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537960/img4_txscyj.jpg",
     attendees: 8000,
     ticketsSold: 420,
     ticketTypes: [
@@ -100,7 +100,7 @@ export function EventDetail() {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <Card className="w-96">
           <CardHeader>
             <CardTitle>Event Not Found</CardTitle>
