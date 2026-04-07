@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { Calendar, MapPin, Users, ArrowRight } from "lucide-react"
+import { Calendar, MapPin, Users, ArrowRight, Search, Filter } from "lucide-react"
 
 interface Event {
   id: string
@@ -14,6 +16,7 @@ interface Event {
   image: string
   attendees: number
   ticketsSold: number
+  category: string
 }
 
 const events: Event[] = [
@@ -23,9 +26,10 @@ const events: Event[] = [
     description: "Join us for the largest and most exciting developer conference where we showcase new innovations and technologies.",
     date: "May 24-26, 2026",
     location: "Mountain View, California",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537954/img1_giajpq.jpg",
     attendees: 12500,
-    ticketsSold: 505
+    ticketsSold: 505,
+    category: "Technology"
   },
   {
     id: "E-002",
@@ -33,9 +37,10 @@ const events: Event[] = [
     description: "Network with innovative startup founders, investors, and tech entrepreneurs from around the world.",
     date: "June 10-11, 2026",
     location: "San Francisco, California",
-    image: "https://images.unsplash.com/photo-1560439514-4e9645039924?q=80&w=1170&auto=format&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537961/img2_oum3as.jpg",
     attendees: 5000,
-    ticketsSold: 248
+    ticketsSold: 248,
+    category: "Business"
   },
   {
     id: "E-003",
@@ -43,9 +48,10 @@ const events: Event[] = [
     description: "Learn the latest web design trends and best practices from industry experts.",
     date: "July 5-7, 2026",
     location: "New York, New York",
-    image: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=1112&auto=format&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537962/img3_xhenrg.jpg",
     attendees: 3000,
-    ticketsSold: 156
+    ticketsSold: 156,
+    category: "Design"
   },
   {
     id: "E-004",
@@ -53,14 +59,31 @@ const events: Event[] = [
     description: "Explore cutting-edge AI technologies and their real-world applications.",
     date: "August 15-17, 2026",
     location: "Boston, Massachusetts",
-    image: "https://images.unsplash.com/photo-1582192730841-2a682d7375f9?q=80&w=1074&auto=format&fit=crop",
+    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537960/img4_txscyj.jpg",
     attendees: 8000,
-    ticketsSold: 420
+    ticketsSold: 420,
+    category: "Technology"
   },
 ]
 
 export function Landing() {
   const navigate = useNavigate()
+
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All Categories")
+  const [selectedLocation, setSelectedLocation] = useState("All Locations")
+
+  const categories = ["All Categories", ...Array.from(new Set(events.map(e => e.category)))]
+  const locations = ["All Locations", ...Array.from(new Set(events.map(e => e.location)))]
+
+  const filteredEvents = events.filter((event) => {
+    const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          event.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory = selectedCategory === "All Categories" || event.category === selectedCategory
+    const matchesLocation = selectedLocation === "All Locations" || event.location === selectedLocation
+    
+    return matchesSearch && matchesCategory && matchesLocation
+  })
 
   const handleEventClick = (eventId: string) => {
     navigate(`/event/${eventId}`)
@@ -82,65 +105,131 @@ export function Landing() {
           </p>
         </div>
 
+        {/* Search & Filters */}
+        <div className="mb-12 max-w-5xl mx-auto flex flex-col md:flex-row gap-4 animate-in fade-in duration-500 delay-150">
+          <div className="relative grow">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
+            <Input
+              type="text"
+              placeholder="Search events by name or description..."
+              className="pl-12 h-12 text-base rounded-full border-border/50 shadow-sm bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-4 w-full md:w-auto">
+            <div className="relative w-full md:w-48">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <select
+                className="h-12 pl-10 pr-10 py-2 bg-background/50 backdrop-blur-sm border border-border/50 rounded-full shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-position-[right_12px_center] bg-size-[16px_16px] cursor-pointer"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div className="relative w-full md:w-56">
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <select
+                className="h-12 pl-10 pr-10 py-2 bg-background/50 backdrop-blur-sm border border-border/50 rounded-full shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-position-[right_12px_center] bg-size-[16px_16px] cursor-pointer"
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+              >
+                {locations.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 animate-in fade-in duration-500 delay-100">
-          {events.map((event) => (
-            <Card
-              key={event.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
-              onClick={() => handleEventClick(event.id)}
-            >
-              {/* Event Image */}
-              <div className="relative h-48 overflow-hidden bg-muted">
-                <img
-                  src={event.image}
-                  alt={event.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-
-              {/* Event Info */}
-              <CardHeader className="pb-3">
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                  {event.name}
-                </CardTitle>
-                <CardDescription className="line-clamp-2">
-                  {event.description}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Event Details */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar size={16} className="shrink-0" />
-                    <span>{event.date}</span>
+        {filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 animate-in fade-in duration-500 delay-200">
+            {filteredEvents.map((event) => (
+              <Card
+                key={event.id}
+                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+                onClick={() => handleEventClick(event.id)}
+              >
+                {/* Event Image */}
+                <div className="relative h-48 overflow-hidden bg-muted">
+                  <div className="absolute top-4 left-4 z-10">
+                    <span className="px-3 py-1 bg-background/90 text-[10px] font-bold uppercase tracking-wider rounded-full text-foreground shadow-sm">
+                      {event.category}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin size={16} className="shrink-0" />
-                    <span>{event.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users size={16} className="shrink-0" />
-                    <span>{event.ticketsSold} tickets sold out of {event.attendees} total</span>
-                  </div>
+                  <img
+                    src={event.image}
+                    alt={event.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
 
-                {/* CTA Button */}
-                <Button
-                  className="w-full gap-2 font-medium shadow-sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEventClick(event.id)
-                  }}
-                >
-                  View Details & Book
-                  <ArrowRight size={16} />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                {/* Event Info */}
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                    {event.name}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {event.description}
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Event Details */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar size={16} className="shrink-0" />
+                      <span>{event.date}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin size={16} className="shrink-0" />
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users size={16} className="shrink-0" />
+                      <span>{event.ticketsSold} tickets sold out of {event.attendees} total</span>
+                    </div>
+                  </div>
+
+                  {/* CTA Button */}
+                  <Button
+                    className="w-full gap-2 font-medium shadow-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEventClick(event.id)
+                    }}
+                  >
+                    View Details & Book
+                    <ArrowRight size={16} />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-background/50 rounded-2xl border border-dashed border-border/50 animate-in fade-in duration-500 delay-200">
+            <Search className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-foreground mb-2">No events found</h3>
+            <p className="text-muted-foreground">
+              We couldn't find any events matching your current filters. Try adjusting your search.
+            </p>
+            <Button 
+              variant="outline" 
+              className="mt-6"
+              onClick={() => {
+                setSearchQuery("")
+                setSelectedCategory("All Categories")
+                setSelectedLocation("All Locations")
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        )}
       </section>
 
       {/* Footer */}
