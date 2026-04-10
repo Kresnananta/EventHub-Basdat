@@ -1,30 +1,74 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabase-client"
+import { useEventContext } from "@/context/EventContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Filter, FileDown } from "lucide-react"
+import { Search, Filter, FileDown, Loader2 } from "lucide-react"
 
-const dummyOrders = [
-  { id: "ORD-1234", customer: "Warren Buffet", email: "warren@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 3,000,000", status: "Completed", date: "Today, 10:24 AM" },
-  { id: "ORD-1235", customer: "Rusdi", email: "rusdi@example.com", event: "Google I/O 2026", tickets: 1, total: "Rp 750,000", status: "Pending", date: "Today, 09:15 AM" },
-  { id: "ORD-1236", customer: "Jerome Polin", email: "jerome@example.com", event: "Tech Startup Conference", tickets: 4, total: "Rp 3,000,000", status: "Completed", date: "Yesterday" },
-  { id: "ORD-1237", customer: "Milea", email: "milea@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 1,500,000", status: "Completed", date: "Yesterday" },
-  { id: "ORD-1238", customer: "Joko Anwar", email: "joko@example.com", event: "Tech Startup Conference", tickets: 5, total: "Rp 2,500,000", status: "Cancelled", date: "23 Apr 2026" },
-  { id: "ORD-1239", customer: "Aldi Taher", email: "aldi@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 1,500,000", status: "Completed", date: "22 Apr 2026" },
-]
+// const dummyOrders = [
+//   { id: "ORD-1234", customer: "Warren Buffet", email: "warren@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 3,000,000", status: "Completed", date: "Today, 10:24 AM" },
+//   { id: "ORD-1235", customer: "Rusdi", email: "rusdi@example.com", event: "Google I/O 2026", tickets: 1, total: "Rp 750,000", status: "Pending", date: "Today, 09:15 AM" },
+//   { id: "ORD-1236", customer: "Jerome Polin", email: "jerome@example.com", event: "Tech Startup Conference", tickets: 4, total: "Rp 3,000,000", status: "Completed", date: "Yesterday" },
+//   { id: "ORD-1237", customer: "Milea", email: "milea@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 1,500,000", status: "Completed", date: "Yesterday" },
+//   { id: "ORD-1238", customer: "Joko Anwar", email: "joko@example.com", event: "Tech Startup Conference", tickets: 5, total: "Rp 2,500,000", status: "Cancelled", date: "23 Apr 2026" },
+//   { id: "ORD-1239", customer: "Aldi Taher", email: "aldi@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 1,500,000", status: "Completed", date: "22 Apr 2026" },
+// ]
 
 export function Orders() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [orders, setOrders] = useState<any[]>([])
+  const { selectedEventId } = useEventContext()
 
-  const filteredOrders = dummyOrders.filter((order) => {
+  useEffect(() => {
+    async function fetchOrders() {
+      setLoading(true)
+
+      let query = supabase
+        .from('orders')
+        .select(`
+        id, status, total_amount, currency, created_at,
+        profiles ( full_name, phone )
+        events ( title )
+      `)
+        .order('created_at', { ascending: false })
+
+      if (selectedEventId) {
+        query = query.eq('event_id', selectedEventId)
+      }
+
+      const { data, error } = await query
+
+      if (data) {
+        // Karena data asli database agak berantakan, kita format (mapping) agar cocok & cantik untuk Tabel UI
+        const formattedOrders = data.map((item: any) => ({
+          id: item.id.substring(0, 8).toUpperCase(), // Potong ID UUID yang sangat panjang menjadi 8 digit awal saja
+          rawId: item.id,
+          customer: item.profiles?.full_name || "Unknown Buyer",
+          contact: item.profiles?.phone || "-",
+          event: item.events?.title || "Unknown Event",
+          tickets: "-", // Di database belum ada kolom total kuantitas tiket, jadi kita strip sementara
+          total: `${item.currency} ${item.total_amount.toLocaleString('id-ID')}`,
+          status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+          date: new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        }))
+        setOrders(formattedOrders)
+      }
+      setLoading(false)
+    }
+    fetchOrders()
+  }, [selectedEventId])
+
+  const filteredOrders = orders.filter((order) => {
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return (
-      order.id.toLowerCase().includes(query) ||
-      order.customer.toLowerCase().includes(query) ||
-      order.email.toLowerCase().includes(query)
+      order.id?.toLowerCase().includes(query) ||
+      order.customer?.toLowerCase().includes(query) ||
+      order.contact?.toLowerCase().includes(query)
     )
   })
 
@@ -73,52 +117,61 @@ export function Orders() {
         </CardHeader>
 
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50">
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead className="text-center">Tickets</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="pointer-events-auto">
-              {filteredOrders.length > 0 ? (
-                filteredOrders.map((order) => (
-                  <TableRow key={order.id} className="border-border/50 hover:bg-muted/30 transition-colors">
-                    <TableCell className="font-semibold text-primary cursor-pointer hover:underline">{order.id}</TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{order.customer}</div>
-                      <div className="text-xs text-muted-foreground">{order.email}</div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{order.event}</TableCell>
-                    <TableCell className="text-center font-medium">{order.tickets}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={order.status === "Completed" ? "default" : order.status === "Pending" ? "secondary" : "destructive"}
-                        className={
-                          order.status === "Completed" ? "bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-none" :
-                            order.status === "Pending" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-none border-none" :
-                              "bg-red-100 text-red-800 hover:bg-red-200 shadow-none border-none"
-                        }
-                      >
-                        {order.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">{order.total}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground font-medium">
-                    Order "{searchQuery}" not found
-                  </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="animate-spin text-primary w-8 h-8" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/50">
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead className="text-center">Tickets</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody className="pointer-events-auto">
+                {filteredOrders.length > 0 ? (
+                  filteredOrders.map((order) => (
+                    <TableRow key={order.rawId} className="border-border/50 hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-semibold text-primary cursor-pointer hover:underline">
+                        <div className="font-semibold text-primary cursor-pointer hover:underline">{order.id}</div>
+                        <div className="text-xs text-muted-foreground">{order.date}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-foreground">{order.customer}</div>
+                        <div className="text-xs text-muted-foreground">{order.contact}</div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{order.event}</TableCell>
+                      <TableCell className="text-center font-medium">{order.tickets}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={order.status === "Completed" || order.status === "Paid" ? "default" : order.status === "Pending" ? "secondary" : "destructive"}
+                          className={
+                            order.status === "Completed" || order.status === "Paid" ? "bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-none" :
+                              order.status === "Pending" ? "bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-none border-none" :
+                                "bg-red-100 text-red-800 hover:bg-red-200 shadow-none border-none"
+                          }
+                        >
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{order.total}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground font-medium">
+                      {searchQuery ? `Pencarian "${searchQuery}" tidak ditemukan` : "Belum ada pesanan aktif."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
