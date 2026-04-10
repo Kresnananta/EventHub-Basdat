@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase-client"
+import { useEventContext } from "@/context/EventContext"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -37,6 +40,23 @@ const eventTools = [
 export function AppSidebar() {
   const location = useLocation();
 
+  const { selectedEventName, setEventContext } = useEventContext();
+  const [eventsData, setEventsData] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data, error } = await supabase
+        .from("events")
+        .select("id, title")
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setEventsData(data);
+      }
+    }
+    fetchEvents();
+  }, []);
+
   return (
     <Sidebar variant="sidebar" className="border-r-0 bg-primary! text-primary-foreground dark">
       <SidebarHeader className="p-4 border-b border-white/10">
@@ -52,7 +72,7 @@ export function AppSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-full flex items-center justify-between px-3 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white font-medium transition-colors border border-white/10">
-                <span className="truncate">All Event</span>
+                <span className="truncate">{selectedEventName}</span>
                 <ChevronsUpDown size={16} className="text-white/60 shrink-0" />
               </button>
             </DropdownMenuTrigger>
@@ -62,15 +82,21 @@ export function AppSidebar() {
               <DropdownMenuSeparator />
 
               {/* Placeholder Data Dummy */}
-              <DropdownMenuItem className="font-bold text-primary bg-primary/5 cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => setEventContext(null, "All Event")}
+                className="font-bold text-primary bg-primary/5 cursor-pointer"
+              >
                 All Event
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                Google I/O 2026
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                Tech Startup Conference
-              </DropdownMenuItem>
+              {eventsData.map((evt) => (
+                <DropdownMenuItem
+                  key={evt.id}
+                  className="cursor-pointer"
+                  onClick={() => setEventContext(evt.id, evt.title)}
+                >
+                  {evt.title}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
