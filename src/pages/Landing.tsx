@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { Calendar, MapPin, Users, ArrowRight, Search, Filter } from "lucide-react"
+import { Calendar, MapPin, Users, ArrowRight, Search, Filter, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/supabase-client"
 
 interface Event {
   id: string
@@ -19,52 +20,52 @@ interface Event {
   category: string
 }
 
-const events: Event[] = [
-  {
-    id: "E-001",
-    name: "Google I/O 2026",
-    description: "Join us for the largest and most exciting developer conference where we showcase new innovations and technologies.",
-    date: "May 24-26, 2026",
-    location: "Mountain View, California",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537954/img1_giajpq.jpg",
-    attendees: 12500,
-    ticketsSold: 505,
-    category: "Technology"
-  },
-  {
-    id: "E-002",
-    name: "Tech Startup Conference",
-    description: "Network with innovative startup founders, investors, and tech entrepreneurs from around the world.",
-    date: "June 10-11, 2026",
-    location: "San Francisco, California",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537961/img2_oum3as.jpg",
-    attendees: 5000,
-    ticketsSold: 248,
-    category: "Business"
-  },
-  {
-    id: "E-003",
-    name: "Web Design Summit",
-    description: "Learn the latest web design trends and best practices from industry experts.",
-    date: "July 5-7, 2026",
-    location: "New York, New York",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537962/img3_xhenrg.jpg",
-    attendees: 3000,
-    ticketsSold: 156,
-    category: "Design"
-  },
-  {
-    id: "E-004",
-    name: "AI & Machine Learning Expo",
-    description: "Explore cutting-edge AI technologies and their real-world applications.",
-    date: "August 15-17, 2026",
-    location: "Boston, Massachusetts",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537960/img4_txscyj.jpg",
-    attendees: 8000,
-    ticketsSold: 420,
-    category: "Technology"
-  },
-]
+// const events: Event[] = [
+//   {
+//     id: "E-001",
+//     name: "Google I/O 2026",
+//     description: "Join us for the largest and most exciting developer conference where we showcase new innovations and technologies.",
+//     date: "May 24-26, 2026",
+//     location: "Mountain View, California",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537954/img1_giajpq.jpg",
+//     attendees: 12500,
+//     ticketsSold: 505,
+//     category: "Technology"
+//   },
+//   {
+//     id: "E-002",
+//     name: "Tech Startup Conference",
+//     description: "Network with innovative startup founders, investors, and tech entrepreneurs from around the world.",
+//     date: "June 10-11, 2026",
+//     location: "San Francisco, California",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537961/img2_oum3as.jpg",
+//     attendees: 5000,
+//     ticketsSold: 248,
+//     category: "Business"
+//   },
+//   {
+//     id: "E-003",
+//     name: "Web Design Summit",
+//     description: "Learn the latest web design trends and best practices from industry experts.",
+//     date: "July 5-7, 2026",
+//     location: "New York, New York",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537962/img3_xhenrg.jpg",
+//     attendees: 3000,
+//     ticketsSold: 156,
+//     category: "Design"
+//   },
+//   {
+//     id: "E-004",
+//     name: "AI & Machine Learning Expo",
+//     description: "Explore cutting-edge AI technologies and their real-world applications.",
+//     date: "August 15-17, 2026",
+//     location: "Boston, Massachusetts",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537960/img4_txscyj.jpg",
+//     attendees: 8000,
+//     ticketsSold: 420,
+//     category: "Technology"
+//   },
+// ]
 
 export function Landing() {
   const navigate = useNavigate()
@@ -73,15 +74,61 @@ export function Landing() {
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
   const [selectedLocation, setSelectedLocation] = useState("All Locations")
 
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          id, title, description, starts_at, location, banner_url,
+          categories ( name ),
+          ticket_tiers ( quantity, sold )
+        `)
+      // Opsional: .eq('status', 'published') jika hanya ingin menampilkan yg published
+
+      if (data) {
+        const formatted = data.map((e: any) => {
+          let totalCapacity = 0
+          let totalSold = 0
+
+          if (e.ticket_tiers && Array.isArray(e.ticket_tiers)) {
+            e.ticket_tiers.forEach((t: any) => {
+              totalCapacity += t.quantity || 0
+              totalSold += t.sold || 0
+            })
+          }
+
+          return {
+            id: e.id,
+            name: e.title || "Untitled Event",
+            description: e.description || "",
+            date: new Date(e.starts_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+            location: e.location || "TBA",
+            image: e.banner_url || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop",
+            attendees: totalCapacity,
+            ticketsSold: totalSold,
+            category: e.categories?.name || "General"
+          }
+        })
+        setEvents(formatted)
+      }
+      setLoading(false)
+    }
+
+    fetchEvents()
+  }, [])
+
   const categories = ["All Categories", ...Array.from(new Set(events.map(e => e.category)))]
   const locations = ["All Locations", ...Array.from(new Set(events.map(e => e.location)))]
 
   const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          event.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = selectedCategory === "All Categories" || event.category === selectedCategory
     const matchesLocation = selectedLocation === "All Locations" || event.location === selectedLocation
-    
+
     return matchesSearch && matchesCategory && matchesLocation
   })
 
@@ -146,7 +193,11 @@ export function Landing() {
         </div>
 
         {/* Events Grid */}
-        {filteredEvents.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin h-10 w-10 text-primary" />
+          </div>
+        ) : filteredEvents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 animate-in fade-in duration-500 delay-200">
             {filteredEvents.map((event) => (
               <Card
@@ -217,8 +268,8 @@ export function Landing() {
             <p className="text-muted-foreground">
               We couldn't find any events matching your current filters. Try adjusting your search.
             </p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="mt-6"
               onClick={() => {
                 setSearchQuery("")

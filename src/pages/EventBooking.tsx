@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { ArrowLeft, Check, Loader2 } from "lucide-react"
 import { addBooking } from "@/lib/bookings"
+import { supabase } from "@/lib/supabase-client"
 
 interface BookingData {
   firstName: string
@@ -16,35 +17,35 @@ interface BookingData {
   quantity: number
 }
 
-const eventData: Record<string, any> = {
-  "E-001": {
-    name: "Google I/O 2026",
-    tickets: {
-      "T-001": { name: "VIP Seating", price: 1500000, priceFormatted: "Rp 1,500K" },
-      "T-002": { name: "Festival (Standing)", price: 750000, priceFormatted: "Rp 750K" }
-    }
-  },
-  "E-002": {
-    name: "Tech Startup Conference",
-    tickets: {
-      "T-003": { name: "Early Bird", price: 500000, priceFormatted: "Rp 500K" },
-      "T-004": { name: "Regular", price: 750000, priceFormatted: "Rp 750K" }
-    }
-  },
-  "E-003": {
-    name: "Web Design Summit",
-    tickets: {
-      "T-005": { name: "Standard", price: 600000, priceFormatted: "Rp 600K" }
-    }
-  },
-  "E-004": {
-    name: "AI & Machine Learning Expo",
-    tickets: {
-      "T-006": { name: "General Admission", price: 800000, priceFormatted: "Rp 800K" },
-      "T-007": { name: "Premium", price: 1200000, priceFormatted: "Rp 1,200K" }
-    }
-  }
-}
+// const eventData: Record<string, any> = {
+//   "E-001": {
+//     name: "Google I/O 2026",
+//     tickets: {
+//       "T-001": { name: "VIP Seating", price: 1500000, priceFormatted: "Rp 1,500K" },
+//       "T-002": { name: "Festival (Standing)", price: 750000, priceFormatted: "Rp 750K" }
+//     }
+//   },
+//   "E-002": {
+//     name: "Tech Startup Conference",
+//     tickets: {
+//       "T-003": { name: "Early Bird", price: 500000, priceFormatted: "Rp 500K" },
+//       "T-004": { name: "Regular", price: 750000, priceFormatted: "Rp 750K" }
+//     }
+//   },
+//   "E-003": {
+//     name: "Web Design Summit",
+//     tickets: {
+//       "T-005": { name: "Standard", price: 600000, priceFormatted: "Rp 600K" }
+//     }
+//   },
+//   "E-004": {
+//     name: "AI & Machine Learning Expo",
+//     tickets: {
+//       "T-006": { name: "General Admission", price: 800000, priceFormatted: "Rp 800K" },
+//       "T-007": { name: "Premium", price: 1200000, priceFormatted: "Rp 1,200K" }
+//     }
+//   }
+// }
 
 export function EventBooking() {
   const navigate = useNavigate()
@@ -58,9 +59,51 @@ export function EventBooking() {
     quantity: 1
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const event = eventId ? eventData[eventId] : null
-  const ticket = event && ticketTypeId ? event.tickets[ticketTypeId] : null
+  const [event, setEvent] = useState<any>(null)
+  const [ticket, setTicket] = useState<any>(null)
+
+  useEffect(() => {
+    async function fetchBookingData() {
+      if (!eventId || !ticketTypeId) return;
+
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          id, title,
+          ticket_tiers ( id, name, price, quantity, sold )
+        `)
+        .eq('id', eventId)
+        .single()
+
+      if (data) {
+        setEvent({ name: data.title })
+
+        if (data.ticket_tiers) {
+          const matchedTicket = data.ticket_tiers.find((t: any) => t.id === ticketTypeId)
+          if (matchedTicket) {
+            setTicket({
+              name: matchedTicket.name,
+              price: matchedTicket.price || 0,
+              priceFormatted: `Rp ${(matchedTicket.price || 0).toLocaleString('id-ID')}`
+            })
+          }
+        }
+      }
+      setLoading(false)
+    }
+
+    fetchBookingData()
+  }, [eventId, ticketTypeId])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      </div>
+    )
+  }
 
   if (!event || !ticket) {
     return (
