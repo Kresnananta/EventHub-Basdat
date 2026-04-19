@@ -19,8 +19,9 @@ export function Login() {
   const navigate = useNavigate()
   const { session } = useAuth()
 
+  // Jika sudah punya sesi, lemparkan dia ke Landing Page (bukan dashboard)
   if (session) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/" replace />
   }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -47,7 +48,12 @@ export function Login() {
         password
       })
       if (error) setErrorMsg("Email or Password wrong")
-      else navigate("/dashboard")
+      else {
+        setSuccessMsg("Mengalihkan ke halaman utama...")
+        setTimeout(() => {
+          navigate("/")
+        }, 1200)
+      }
     }
     setLoading(false)
   }
@@ -57,7 +63,7 @@ export function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`
+        redirectTo: `${window.location.origin}/`
       }
     })
     if (error) setErrorMsg(error.message)
@@ -79,7 +85,7 @@ export function Login() {
             </div>
             <span className="text-2xl font-extrabold tracking-tight">EventHub</span>
           </div>
-          <h1 className="text-5xl font-bold mb-4">Manage your event with <span className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">EventHub</span></h1>
+          <h1 className="text-5xl font-bold mb-4">Find your next big moment with <span className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">EventHub</span></h1>
           <p className="text-lg text-white mb-8">Lorem ipsum dolor sit amet consectetur adipisicing elit. Distinctio quia magnam perferendis omnis nam quidem recusandae, repellendus odit velit dolor?</p>
         </div>
       </div>
@@ -92,7 +98,7 @@ export function Login() {
               {isSignUp ? "Create Account" : "Welcome Back"}
             </h2>
             <p className="text-muted-foreground mt-2">
-              {isSignUp ? "Start managing your events today" : "Sign in to your account to continue"}
+              {isSignUp ? "Skip the line, get tickets online" : "Sign in to your account to continue"}
             </p>
           </div>
 
@@ -158,7 +164,7 @@ export function Login() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full gap-2 mt-2 h-11 text-[15px]" disabled={loading}>
+            <Button type="submit" className="w-full gap-2 mt-2 h-11 text-[15px] cursor-pointer" disabled={loading}>
               {loading ? <Loader2 className="animate-spin w-4 h-4" /> : null}
               {isSignUp ? "Sign Up" : "Sign In"}
               {!loading && <ArrowRight size={16} />}
@@ -175,7 +181,7 @@ export function Login() {
           <Button
             type="button"
             variant="outline"
-            className="w-full font-medium shadow-sm h-11 bg-white hover:bg-slate-50"
+            className="w-full font-medium shadow-sm h-11 bg-white hover:bg-slate-50 cursor-pointer"
             onClick={handleGoogleLogin}
           >
             {/* SVG Google */}
@@ -197,7 +203,7 @@ export function Login() {
                 setErrorMsg("");
                 setSuccessMsg("");
               }}
-              className="text-primary font-bold hover:underline"
+              className="text-primary font-bold hover:underline cursor-pointer"
             >
               {isSignUp ? "Sign In" : "Sign up for free"}
             </button>
