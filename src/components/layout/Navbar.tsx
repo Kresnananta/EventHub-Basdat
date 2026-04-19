@@ -1,13 +1,17 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from "@/components/ui/button"
-import { LogOut, Home, Ticket } from "lucide-react"
+import { LogOut, Home, Ticket, UserCircle } from "lucide-react"
+import { useAuth } from '@/context/AuthContext'
+import { supabase } from '@/lib/supabase-client'
 
 export function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser')
+  const { session, profile } = useAuth()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     navigate('/')
   }
 
@@ -18,11 +22,11 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div 
+          <div
             className="flex-shrink-0 cursor-pointer"
             onClick={() => navigate('/')}
           >
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               EventHub
             </h1>
           </div>
@@ -38,31 +42,62 @@ export function Navbar() {
               <Home size={18} />
               Home
             </Button>
-            <Button
-              variant={isActive('/your-events') ? 'default' : 'ghost'}
-              size="sm"
-              className="gap-2"
-              onClick={() => navigate('/your-events')}
-            >
-              <Ticket size={18} />
-              Your Events
-            </Button>
+
+            {/* kalo user blm login, your event ilang */}
+            {session && (
+              <Button
+                variant={isActive('/your-events') ? 'default' : 'ghost'}
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate('/your-events')}
+              >
+                <Ticket size={18} />
+                Your Events
+              </Button>
+            )}
           </div>
 
           {/* Right side - User info & actions */}
           <div className="flex items-center gap-4">
-            <div className="hidden sm:block">
-              <p className="text-sm font-medium text-foreground">Welcome, Guest!</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handleLogout}
-            >
-              <LogOut size={16} />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
+            {/* {profile?.role === 'organizer' && (
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                onClick={() => navigate('/dashboard')}
+              >
+                Admin Dashboard
+              </Button>
+            )} */}
+
+            {session ? (
+              <>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-medium text-foreground">
+                    Welcome, {profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0]}!
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={16} />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate('/login')}
+              >
+                <UserCircle size={16} />
+                <span className="hidden sm:inline">Login / Register</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -77,15 +112,17 @@ export function Navbar() {
             <Home size={16} />
             Home
           </Button>
-          <Button
-            variant={isActive('/your-events') ? 'default' : 'ghost'}
-            size="sm"
-            className="gap-2 flex-1"
-            onClick={() => navigate('/your-events')}
-          >
-            <Ticket size={16} />
-            Your Events
-          </Button>
+          {session && (
+            <Button
+              variant={isActive('/your-events') ? 'default' : 'ghost'}
+              size="sm"
+              className="gap-2 flex-1"
+              onClick={() => navigate('/your-events')}
+            >
+              <Ticket size={16} />
+              Your Events
+            </Button>
+          )}
         </div>
       </div>
     </nav>

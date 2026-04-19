@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 
 export function ProtectedRoute() {
-  const { session, loading } = useAuth()
+  const { session, profile, loading } = useAuth()
 
   if (loading) {
     return (
@@ -15,6 +15,11 @@ export function ProtectedRoute() {
 
   if (!session) {
     return <Navigate to="/login" replace />
+  }
+
+  if (profile?.role !== 'organizer') {
+    // Usir kembali ke Landing Page jika bukan organizer
+    return <Navigate to="/" replace />
   }
 
   return <Outlet />
