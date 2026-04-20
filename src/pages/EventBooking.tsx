@@ -65,8 +65,34 @@ export function EventBooking() {
 
   const [event, setEvent] = useState<any>(null)
   const [ticket, setTicket] = useState<any>(null)
+useEffect(() => {
+  async function fetchUserProfile() {
+    if (!session?.user) return
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name, phone')
+      .eq('id', session.user.id)
+      .single()
+
+    const nameParts = (data?.full_name || '').trim().split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || ''
+
+    setFormData(prev => ({
+      ...prev,
+      firstName,
+      lastName,
+      email: session.user.email || '',  // email ada di auth.users, bukan di profiles
+      phone: data?.phone || ''
+    }))
+  }
+
+  fetchUserProfile()
+}, [session])
 
   useEffect(() => {
+    
     async function fetchBookingData() {
       if (!eventId || !ticketTypeId) return;
 
