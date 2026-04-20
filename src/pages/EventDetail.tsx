@@ -1,10 +1,12 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { ArrowLeft, Calendar, MapPin, Users, Tag } from "lucide-react"
+import { ArrowLeft, Calendar, MapPin, Users, Tag, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/supabase-client"
 
 interface EventDetails {
   id: string
@@ -30,73 +32,140 @@ interface TicketType {
 }
 
 // Mock data untuk event details
-const eventDetails: Record<string, EventDetails> = {
-  "E-001": {
-    id: "E-001",
-    name: "Google I/O 2026",
-    description: "Join us for the largest and most exciting developer conference.",
-    fullDescription: "Google I/O 2026 is our annual developer conference where we showcase the latest innovations and technologies from Google. Featuring keynote presentations, hands-on workshops, networking opportunities, and more. This year we're exploring AI, cloud computing, and the future of computing.",
-    date: "May 24-26, 2026",
-    location: "Mountain View, California",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537954/img1_giajpq.jpg",
-    attendees: 12500,
-    ticketsSold: 505,
-    ticketTypes: [
-      { id: "T-001", name: "VIP Seating", price: 1500000, priceFormatted: "Rp 1,500K", capacity: 100, available: 15, status: "Available" },
-      { id: "T-002", name: "Festival (Standing)", price: 750000, priceFormatted: "Rp 750K", capacity: 500, available: 80, status: "Available" },
-    ]
-  },
-  "E-002": {
-    id: "E-002",
-    name: "Tech Startup Conference",
-    description: "Network with innovative startup founders, investors, and tech entrepreneurs.",
-    fullDescription: "Meet the brightest minds in the startup ecosystem. This conference brings together founders, investors, mentors, and innovators to share experiences, discuss trends, and build connections. Learn from success stories and navigate the challenges of building a startup.",
-    date: "June 10-11, 2026",
-    location: "San Francisco, California",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537961/img2_oum3as.jpg",
-    attendees: 5000,
-    ticketsSold: 248,
-    ticketTypes: [
-      { id: "T-003", name: "Early Bird", price: 500000, priceFormatted: "Rp 500K", capacity: 200, available: 0, status: "Sold Out" },
-      { id: "T-004", name: "Regular", price: 750000, priceFormatted: "Rp 750K", capacity: 500, available: 252, status: "Available" },
-    ]
-  },
-  "E-003": {
-    id: "E-003",
-    name: "Web Design Summit",
-    description: "Learn the latest web design trends and best practices from industry experts.",
-    fullDescription: "Discover the latest trends in web design, UX/UI principles, and responsive design techniques. Our expert speakers will share insights on creating beautiful, functional, and accessible web experiences that engage users.",
-    date: "July 5-7, 2026",
-    location: "New York, New York",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537962/img3_xhenrg.jpg",
-    attendees: 3000,
-    ticketsSold: 156,
-    ticketTypes: [
-      { id: "T-005", name: "Standard", price: 600000, priceFormatted: "Rp 600K", capacity: 300, available: 144, status: "Available" },
-    ]
-  },
-  "E-004": {
-    id: "E-004",
-    name: "AI & Machine Learning Expo",
-    description: "Explore cutting-edge AI technologies and their real-world applications.",
-    fullDescription: "Experience the future of AI and Machine Learning. This expo features live demonstrations, workshops, and talks from leading AI researchers and industry practitioners. Learn how AI is transforming businesses across different sectors.",
-    date: "August 15-17, 2026",
-    location: "Boston, Massachusetts",
-    image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537960/img4_txscyj.jpg",
-    attendees: 8000,
-    ticketsSold: 420,
-    ticketTypes: [
-      { id: "T-006", name: "General Admission", price: 800000, priceFormatted: "Rp 800K", capacity: 400, available: 180, status: "Available" },
-      { id: "T-007", name: "Premium", price: 1200000, priceFormatted: "Rp 1,200K", capacity: 150, available: 50, status: "Available" },
-    ]
-  }
-}
+// const eventDetails: Record<string, EventDetails> = {
+//   "E-001": {
+//     id: "E-001",
+//     name: "Google I/O 2026",
+//     description: "Join us for the largest and most exciting developer conference.",
+//     fullDescription: "Google I/O 2026 is our annual developer conference where we showcase the latest innovations and technologies from Google. Featuring keynote presentations, hands-on workshops, networking opportunities, and more. This year we're exploring AI, cloud computing, and the future of computing.",
+//     date: "May 24-26, 2026",
+//     location: "Mountain View, California",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537954/img1_giajpq.jpg",
+//     attendees: 12500,
+//     ticketsSold: 505,
+//     ticketTypes: [
+//       { id: "T-001", name: "VIP Seating", price: 1500000, priceFormatted: "Rp 1,500K", capacity: 100, available: 15, status: "Available" },
+//       { id: "T-002", name: "Festival (Standing)", price: 750000, priceFormatted: "Rp 750K", capacity: 500, available: 80, status: "Available" },
+//     ]
+//   },
+//   "E-002": {
+//     id: "E-002",
+//     name: "Tech Startup Conference",
+//     description: "Network with innovative startup founders, investors, and tech entrepreneurs.",
+//     fullDescription: "Meet the brightest minds in the startup ecosystem. This conference brings together founders, investors, mentors, and innovators to share experiences, discuss trends, and build connections. Learn from success stories and navigate the challenges of building a startup.",
+//     date: "June 10-11, 2026",
+//     location: "San Francisco, California",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537961/img2_oum3as.jpg",
+//     attendees: 5000,
+//     ticketsSold: 248,
+//     ticketTypes: [
+//       { id: "T-003", name: "Early Bird", price: 500000, priceFormatted: "Rp 500K", capacity: 200, available: 0, status: "Sold Out" },
+//       { id: "T-004", name: "Regular", price: 750000, priceFormatted: "Rp 750K", capacity: 500, available: 252, status: "Available" },
+//     ]
+//   },
+//   "E-003": {
+//     id: "E-003",
+//     name: "Web Design Summit",
+//     description: "Learn the latest web design trends and best practices from industry experts.",
+//     fullDescription: "Discover the latest trends in web design, UX/UI principles, and responsive design techniques. Our expert speakers will share insights on creating beautiful, functional, and accessible web experiences that engage users.",
+//     date: "July 5-7, 2026",
+//     location: "New York, New York",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537962/img3_xhenrg.jpg",
+//     attendees: 3000,
+//     ticketsSold: 156,
+//     ticketTypes: [
+//       { id: "T-005", name: "Standard", price: 600000, priceFormatted: "Rp 600K", capacity: 300, available: 144, status: "Available" },
+//     ]
+//   },
+//   "E-004": {
+//     id: "E-004",
+//     name: "AI & Machine Learning Expo",
+//     description: "Explore cutting-edge AI technologies and their real-world applications.",
+//     fullDescription: "Experience the future of AI and Machine Learning. This expo features live demonstrations, workshops, and talks from leading AI researchers and industry practitioners. Learn how AI is transforming businesses across different sectors.",
+//     date: "August 15-17, 2026",
+//     location: "Boston, Massachusetts",
+//     image: "https://res.cloudinary.com/dslyoqmjx/image/upload/v1775537960/img4_txscyj.jpg",
+//     attendees: 8000,
+//     ticketsSold: 420,
+//     ticketTypes: [
+//       { id: "T-006", name: "General Admission", price: 800000, priceFormatted: "Rp 800K", capacity: 400, available: 180, status: "Available" },
+//       { id: "T-007", name: "Premium", price: 1200000, priceFormatted: "Rp 1,200K", capacity: 150, available: 50, status: "Available" },
+//     ]
+//   }
+// }
 
 export function EventDetail() {
   const navigate = useNavigate()
   const { eventId } = useParams<{ eventId: string }>()
 
-  const event = eventId ? eventDetails[eventId] : null
+  const [event, setEvent] = useState<EventDetails | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchEventDetails() {
+      if (!eventId) return;
+
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          id, title, description, starts_at, location, banner_url,
+          ticket_tiers ( id, name, price, quantity, sold )
+        `)
+        .eq('id', eventId)
+        .single()
+
+      if (data) {
+        let totalCapacity = 0;
+        let totalSold = 0;
+        const mappedTicketTypes: TicketType[] = [];
+
+        if (data.ticket_tiers && Array.isArray(data.ticket_tiers)) {
+          data.ticket_tiers.forEach((t: any) => {
+            const capacity = t.quantity || 0;
+            const sold = t.sold || 0;
+            const available = Math.max(0, capacity - sold);
+
+            totalCapacity += capacity;
+            totalSold += sold;
+
+            mappedTicketTypes.push({
+              id: t.id,
+              name: t.name || 'Ticket',
+              price: t.price || 0,
+              priceFormatted: `Rp ${(t.price || 0).toLocaleString('id-ID')}`,
+              capacity: capacity,
+              available: available,
+              status: available > 0 ? 'Available' : 'Sold Out'
+            });
+          });
+        }
+
+        setEvent({
+          id: data.id,
+          name: data.title || 'Untitled Event',
+          description: data.description || '',
+          fullDescription: data.description || 'No description available for this event.',
+          date: new Date(data.starts_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          location: data.location || 'TBA',
+          image: data.banner_url || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop",
+          attendees: totalCapacity,
+          ticketsSold: totalSold,
+          ticketTypes: mappedTicketTypes
+        })
+      }
+      setLoading(false)
+    }
+
+    fetchEventDetails()
+  }, [eventId])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center auto-animate">
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      </div>
+    )
+  }
 
   if (!event) {
     return (
@@ -173,7 +242,7 @@ export function EventDetail() {
                 <CardContent className="pt-6 flex items-center gap-3">
                   <Users className="h-5 w-5 text-primary shrink-0" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Attendees</p>
+                    <p className="text-sm text-muted-foreground">Seats</p>
                     <p className="font-medium text-foreground">{event.attendees.toLocaleString()}</p>
                   </div>
                 </CardContent>

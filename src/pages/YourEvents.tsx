@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { getBookings, deleteBooking, type BookingItem } from "@/lib/bookings"
+// import { getBookings, deleteBooking, type BookingItem } from "@/lib/bookings"
 import { Trash2, Calendar, Mail, Phone, User, DollarSign } from "lucide-react"
 import {
   AlertDialog,
@@ -17,22 +17,66 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useAuth } from '@/context/AuthContext'
+import { supabase } from '@/lib/supabase-client'
 
 export function YourEvents() {
-  const [bookings, setBookings] = useState<BookingItem[]>([])
+  const { session } = useAuth()
+  const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true)
-    const data = getBookings()
-    setBookings(data)
-    setLoading(false)
-  }, [])
+    async function fetchMyBookings() {
+      if (!session?.user?.id) {
+        setLoading(false)
+        return
+      }
+      setLoading(true)
+
+      //  Mengambil orders sekaligus gabungin data event, profil, sama tiket
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id, created_at, status, total_amount,
+          events ( title ),
+          profiles ( full_name, phone ),
+          tickets ( id, ticket_tiers ( name, price ))
+        `)
+        .eq(`buyer_id`, session.user.id)
+        .order(`created_at`, { ascending: false })
+
+      if (data) {
+        const formatted = data.map((order: any) => {
+          const qty = order.tickets ? order.tickets && order.tickets.length : 0;
+          const firstTicket = order.tickets && order.tickets.length > 0 ? order.tickets[0] : null;
+
+          return {
+            id: order.id,
+            eventName: order.events?.title || 'Unknown Event',
+            status: order.status === 'paid' ? 'confirmed' : order.status,
+            ticketName: firstTicket?.ticket_tiers?.name || 'Ticket',
+            ticketPrice: firstTicket?.ticket_tiers?.price || 0,
+            quantity: qty,
+            totalPrice: order.total_amount,
+            firstName: order.profiles?.full_name || 'User',
+            lastName: '', // Tidak dipisah karena full_name
+            email: session.user.email || 'No Email',
+            phone: order.profiles?.phone || '-',
+            bookingDate: order.created_at
+          }
+        });
+        setBookings(formatted)
+      }
+      setLoading(false)
+    }
+    fetchMyBookings()
+  }, [session])
 
   const handleDelete = (id: string) => {
-    if (deleteBooking(id)) {
-      setBookings(bookings.filter(b => b.id !== id))
-    }
+    // if (deleteBooking(id)) {
+    //   setBookings(bookings.filter(b => b.id !== id))
+    // }
+    alert("Order cannot be refunded. Please contact committe to ask for refund.")
   }
 
   const formatDate = (dateString: string) => {
