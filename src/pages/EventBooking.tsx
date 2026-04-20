@@ -8,6 +8,7 @@ import { Footer } from "@/components/layout/Footer"
 import { ArrowLeft, Check, Loader2 } from "lucide-react"
 import { addBooking } from "@/lib/bookings"
 import { supabase } from "@/lib/supabase-client"
+import { useAuth } from '@/context/AuthContext'
 
 interface BookingData {
   firstName: string
@@ -49,6 +50,7 @@ interface BookingData {
 
 export function EventBooking() {
   const navigate = useNavigate()
+  const { session } = useAuth()
   const { eventId, ticketTypeId } = useParams<{ eventId: string; ticketTypeId: string }>()
   const [step, setStep] = useState<'form' | 'confirmation'>('form')
   const [formData, setFormData] = useState<BookingData>({
@@ -156,32 +158,44 @@ export function EventBooking() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // error jika user blm terdaftar
+    if (!session?.user) {
+      alert("Sesi anda habis atau belum login. Silahkan login.")
+      navigate('/login')
+      return
+    }
+
     if (formData.firstName && formData.lastName && formData.email && formData.phone) {
 
       setIsSubmitting(true)
 
-      setTimeout(() => {
-        // Save booking to storage
-        const booking = addBooking({
-          eventId: eventId || 'E-000',
-          eventName: event.name,
-          ticketTypeId: ticketTypeId || 'T-000',
-          ticketName: ticket.name,
-          ticketPrice: ticket.price,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
+      try {
+        const qty = Number(formData.quantity) || 1
+        const totalAmount = totalPrice * qty
 
-          // Fallback if user form not filled
-          quantity: Number(formData.quantity) || 1,
-          totalPrice
-        });
-        console.log('Booking created:', booking);
-        setStep('confirmation');
-      }, 1500) // simulate network delay 1.5s
+        const { data, error } = await supabase.rpc('book_ticket', {
+          p_buyer_id: session.user.id,
+          p_event_id: eventId,
+          p_tier_id: ticketTypeId,
+          p_quantity: qty,
+          p_total_amount: totalAmount
+        })
+
+        if (error) {
+          console.error('Booking Error:', error)
+          alert('Gagal memproses tiket:\n' + error.message)
+        } else {
+          console.log('Success Booking:', data)
+          setStep('confirmation')
+        }
+      } catch (err: any) {
+        alert('Connection error:' + err.message)
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
