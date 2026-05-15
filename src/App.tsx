@@ -11,6 +11,8 @@ import { EventDetail } from './pages/EventDetail'
 import { EventBooking } from './pages/EventBooking'
 import { YourEvents } from './pages/YourEvents'
 import { Login } from './pages/Login'
+import { Profile } from './pages/Profile'
+import { MyTickets } from './pages/MyTickets'
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
           <Route path='/event/:eventId' element={<EventDetail />} />
           <Route path='/booking/:eventId/:ticketTypeId' element={<EventBooking />} />
           <Route path='/your-events' element={<YourEvents />} />
+          <Route path='/my-tickets' element={<MyTickets />} />
+          <Route path='/profile' element={<Profile />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path='/dashboard' element={<DashboardLayout />}>
