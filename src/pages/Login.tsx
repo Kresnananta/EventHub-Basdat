@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, Navigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase-client"
+import { ensureUserProfile } from "@/lib/profiles"
 import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +12,7 @@ export function Login() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
@@ -18,6 +20,16 @@ export function Login() {
 
   const navigate = useNavigate()
   const { session } = useAuth()
+
+  const getAuthErrorMessage = (error: unknown) => {
+    if (!(error instanceof Error)) return "Authentication failed. Please try again."
+
+    if (error.message.toLowerCase().includes("email rate limit")) {
+      return "Terlalu banyak percobaan registrasi. Tunggu beberapa saat, lalu coba lagi."
+    }
+
+    return error.message
+  }
 
   // Jika sudah punya sesi, lemparkan dia ke Landing Page (bukan dashboard)
   if (session) {
@@ -30,32 +42,53 @@ export function Login() {
     setErrorMsg("")
     setSuccessMsg("")
 
-    if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName }
-        }
-      })
+    if (isSignUp && password !== confirmPassword) {
+      setErrorMsg("Konfirmasi password tidak cocok.")
+      setLoading(false)
+      return
+    }
 
-      if (error) setErrorMsg(error.message)
-      else setSuccessMsg("Registration successful! Please check your email to confirm your account.")
-    }
-    else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-      if (error) setErrorMsg("Email or Password wrong")
-      else {
-        setSuccessMsg("Mengalihkan ke halaman utama...")
-        setTimeout(() => {
-          navigate("/")
-        }, 1200)
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName.trim() },
+            emailRedirectTo: `${window.location.origin}/`,
+          }
+        })
+
+        if (error) throw error
+
+        if (data.user && data.session) {
+          await ensureUserProfile(data.user)
+          setSuccessMsg("Akun berhasil dibuat. Mengalihkan ke halaman utama...")
+          setTimeout(() => {
+            navigate("/")
+          }, 1200)
+        } else {
+          setSuccessMsg("Registration successful! Please check your email to confirm your account.")
+        }
       }
+      else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        if (error) setErrorMsg("Email or Password wrong")
+        else {
+          setSuccessMsg("Mengalihkan ke halaman utama...")
+          setTimeout(() => {
+            navigate("/")
+          }, 1200)
+        }
+      }
+    } catch (error) {
+      setErrorMsg(getAuthErrorMessage(error))
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   // SSO Google
@@ -117,7 +150,7 @@ export function Login() {
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {isSignUp && (
               <div>
-                <Label>Full Name</Label>
+                <Label htmlFor="fullName">Full Name</Label>
                 <Input
                   id="fullName"
                   placeholder="John Cena"
@@ -164,6 +197,24 @@ export function Login() {
               </div>
             </div>
 
+            {isSignUp && password && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-9 bg-slate-50 focus-visible:ring-primary/50"
+                  />
+                </div>
+              </div>
+            )}
+
             <Button type="submit" className="w-full gap-2 mt-2 h-11 text-[15px] cursor-pointer" disabled={loading}>
               {loading ? <Loader2 className="animate-spin w-4 h-4" /> : null}
               {isSignUp ? "Sign Up" : "Sign In"}
@@ -202,6 +253,7 @@ export function Login() {
                 setIsSignUp(!isSignUp);
                 setErrorMsg("");
                 setSuccessMsg("");
+                setConfirmPassword("");
               }}
               className="text-primary font-bold hover:underline cursor-pointer"
             >

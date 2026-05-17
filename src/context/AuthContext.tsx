@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { type Session, type User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase-client"
+import { ensureUserProfile, type Profile } from "@/lib/profiles"
 
 type AuthContextType = {
     session: Session | null
     user: User | null
-    profile: any | null
+    profile: Profile | null
     loading: boolean
 }
 
@@ -14,7 +15,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [session, setSession] = useState<Session | null>(null)
     const [user, setUser] = useState<User | null>(null)
-    const [profile, setProfile] = useState<any | null>(null)
+    const [profile, setProfile] = useState<Profile | null>(null)
     const [loading, setLoading] = useState(true)
 
     async function hydrateUser(session: Session | null) {
@@ -22,9 +23,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         
         if (session?.user) {
-            // Tarik data profil publik untuk mengecek ROLE!
-            const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
-            setProfile(data)
+            try {
+                // Tarik data profil publik untuk mengecek ROLE!
+                const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+
+                if (error) throw error
+
+                setProfile(data ?? await ensureUserProfile(session.user))
+            } catch (error) {
+                console.error("Failed to load user profile:", error)
+                setProfile(null)
+            }
         } else {
             setProfile(null)
         }
