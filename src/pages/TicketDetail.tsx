@@ -16,7 +16,6 @@ import {
   Download,
   Loader2,
   MapPin,
-  QrCode,
   Ticket,
   User,
 } from "lucide-react"
@@ -170,6 +169,11 @@ export function TicketDetail() {
     window.print()
   }
 
+  const getQrImageUrl = (value: string) => {
+    const encodedValue = encodeURIComponent(value)
+    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodedValue}`
+  }
+
   if (!authLoading && !session) {
     return null
   }
@@ -288,9 +292,13 @@ export function TicketDetail() {
                 <CardDescription>Show this code at the venue entrance</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="aspect-square rounded-lg border-2 border-dashed border-border bg-slate-50 flex flex-col items-center justify-center text-muted-foreground">
-                  <QrCode size={88} className="mb-3 opacity-70" />
-                  <p className="text-sm font-medium">QR placeholder</p>
+                <div className="aspect-square rounded-lg border border-border bg-white p-5 shadow-sm">
+                  <img
+                    src={getQrImageUrl(ticket.ticket_code)}
+                    alt={`QR code for ticket ${ticket.ticket_code}`}
+                    className="h-full w-full object-contain"
+                    loading="eager"
+                  />
                 </div>
 
                 <div className="rounded-lg border border-border bg-muted/40 p-4 text-center">

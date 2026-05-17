@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { Loader2, Ticket, Download, QrCode, Clock, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react"
+import { Loader2, Ticket, Download, QrCode, Clock, CheckCircle2, AlertCircle, ArrowRight, X } from "lucide-react"
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase-client'
 import { useNavigate } from 'react-router-dom'
@@ -29,6 +29,7 @@ export function MyTickets() {
   const [tickets, setTickets] = useState<TicketData[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | 'used' | 'expired'>('all')
+  const [selectedQrTicket, setSelectedQrTicket] = useState<TicketData | null>(null)
 
   useEffect(() => {
     if (!authLoading && !session) {
@@ -143,6 +144,11 @@ export function MyTickets() {
         {ticket.status}
       </Badge>
     )
+  }
+
+  const getQrImageUrl = (value: string) => {
+    const encodedValue = encodeURIComponent(value)
+    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodedValue}`
   }
 
   return (
@@ -274,11 +280,11 @@ export function MyTickets() {
                       className="flex-1 gap-1"
                       onClick={(event) => {
                         event.stopPropagation()
-                        navigate(`/ticket/${ticket.id}`)
+                        setSelectedQrTicket(ticket)
                       }}
                     >
                       <QrCode size={16} />
-                      <span className="hidden sm:inline">Details</span>
+                      <span>Show QR code</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -304,6 +310,56 @@ export function MyTickets() {
           </div>
         )}
       </main>
+
+      {selectedQrTicket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8"
+          onClick={() => setSelectedQrTicket(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ticket-qr-title"
+            className="w-full max-w-sm rounded-xl border border-border bg-background p-5 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="ticket-qr-title" className="text-lg font-semibold text-foreground">
+                  {selectedQrTicket.event_title}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Show this QR code at the event registration desk.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedQrTicket(null)}
+                aria-label="Close QR code"
+              >
+                <X size={18} />
+              </Button>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-border bg-white p-5">
+              <img
+                src={getQrImageUrl(selectedQrTicket.ticket_code)}
+                alt={`QR code for ticket ${selectedQrTicket.ticket_code}`}
+                className="mx-auto aspect-square w-full max-w-60 object-contain"
+                loading="eager"
+              />
+            </div>
+
+            <div className="mt-4 rounded-lg border border-border bg-muted/40 p-4 text-center">
+              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Ticket Code</p>
+              <p className="break-all font-mono text-xl font-bold text-foreground">
+                {selectedQrTicket.ticket_code}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
