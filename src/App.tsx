@@ -9,7 +9,6 @@ import { Orders } from './pages/Orders'
 import { Attendees } from './pages/Attendees'
 import { EventDetail } from './pages/EventDetail'
 import { EventBooking } from './pages/EventBooking'
-import { YourEvents } from './pages/YourEvents'
 import { Login } from './pages/Login'
 import { Profile } from './pages/Profile'
 import { MyTickets } from './pages/MyTickets'
@@ -23,7 +22,7 @@ function App() {
           <Route path='/login' element={<Login />} />
           <Route path='/event/:eventId' element={<EventDetail />} />
           <Route path='/booking/:eventId/:ticketTypeId' element={<EventBooking />} />
-          <Route path='/your-events' element={<YourEvents />} />
+          <Route path='/your-events' element={<Navigate to='/my-tickets' replace />} />
           <Route path='/my-tickets' element={<MyTickets />} />
           <Route path='/profile' element={<Profile />} />
 

@@ -60,28 +60,16 @@ export function Navbar() {
               Home
             </Button>
 
-            {/* kalo user blm login, your event ilang */}
             {session && (
-              <>
-                <Button
-                  variant={isActive('/your-events') ? 'default' : 'ghost'}
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => navigate('/your-events')}
-                >
-                  <Ticket size={18} />
-                  Your Events
-                </Button>
-                <Button
-                  variant={isActive('/my-tickets') ? 'default' : 'ghost'}
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => navigate('/my-tickets')}
-                >
-                  <Ticket size={18} />
-                  My Tickets
-                </Button>
-              </>
+              <Button
+                variant={isActive('/my-tickets') ? 'default' : 'ghost'}
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate('/my-tickets')}
+              >
+                <Ticket size={18} />
+                My Tickets
+              </Button>
             )}
           </div>
 
@@ -157,26 +145,15 @@ export function Navbar() {
             Home
           </Button>
           {session && (
-            <>
-              <Button
-                variant={isActive('/your-events') ? 'default' : 'ghost'}
-                size="sm"
-                className="gap-2 flex-1"
-                onClick={() => navigate('/your-events')}
-              >
-                <Ticket size={16} />
-                Your Events
-              </Button>
-              <Button
-                variant={isActive('/my-tickets') ? 'default' : 'ghost'}
-                size="sm"
-                className="gap-2 flex-1"
-                onClick={() => navigate('/my-tickets')}
-              >
-                <Ticket size={16} />
-                My Tickets
-              </Button>
-            </>
+            <Button
+              variant={isActive('/my-tickets') ? 'default' : 'ghost'}
+              size="sm"
+              className="gap-2 flex-1"
+              onClick={() => navigate('/my-tickets')}
+            >
+              <Ticket size={16} />
+              My Tickets
+            </Button>
           )}
         </div>
       </div>
