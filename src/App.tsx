@@ -12,6 +12,7 @@ import { EventBooking } from './pages/EventBooking'
 import { Login } from './pages/Login'
 import { Profile } from './pages/Profile'
 import { MyTickets } from './pages/MyTickets'
+import { TicketDetail } from './pages/TicketDetail'
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
           <Route path='/booking/:eventId/:ticketTypeId' element={<EventBooking />} />
           <Route path='/your-events' element={<Navigate to='/my-tickets' replace />} />
           <Route path='/my-tickets' element={<MyTickets />} />
+          <Route path='/my-tickets/:ticketId' element={<TicketDetail />} />
+          <Route path='/ticket/:ticketId' element={<TicketDetail />} />
           <Route path='/profile' element={<Profile />} />
 
           <Route element={<ProtectedRoute />}>

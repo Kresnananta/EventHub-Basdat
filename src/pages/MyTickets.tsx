@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { Loader2, Ticket, Download, QrCode, Clock, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, Ticket, Download, QrCode, Clock, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react"
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase-client'
 import { useNavigate } from 'react-router-dom'
@@ -145,10 +145,6 @@ export function MyTickets() {
     )
   }
 
-  const isEventPast = (eventDate: string) => {
-    return new Date(eventDate) < new Date()
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
@@ -201,7 +197,19 @@ export function MyTickets() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredTickets.map((ticket) => (
-              <Card key={ticket.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <Card
+                key={ticket.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/ticket/${ticket.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    navigate(`/ticket/${ticket.id}`)
+                  }
+                }}
+                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1">
@@ -264,19 +272,31 @@ export function MyTickets() {
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1"
-                      disabled={isEventPast(ticket.event_date)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        navigate(`/ticket/${ticket.id}`)
+                      }}
                     >
                       <QrCode size={16} />
-                      <span className="hidden sm:inline">Show QR</span>
+                      <span className="hidden sm:inline">Details</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       className="flex-1 gap-1"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        navigate(`/ticket/${ticket.id}`)
+                      }}
                     >
                       <Download size={16} />
                       <span className="hidden sm:inline">Download</span>
                     </Button>
+                  </div>
+
+                  <div className="flex items-center justify-end text-xs font-medium text-primary">
+                    View ticket
+                    <ArrowRight size={14} className="ml-1" />
                   </div>
                 </CardContent>
               </Card>
