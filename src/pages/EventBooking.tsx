@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { ArrowLeft, Check, Loader2 } from "lucide-react"
-import { addBooking } from "@/lib/bookings"
 import { supabase } from "@/lib/supabase-client"
 import { useAuth } from '@/context/AuthContext'
 
@@ -96,7 +95,7 @@ useEffect(() => {
     async function fetchBookingData() {
       if (!eventId || !ticketTypeId) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('events')
         .select(`
           id, title,
@@ -301,11 +300,11 @@ useEffect(() => {
                 </p>
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => navigate('/your-events')}
+                    onClick={() => navigate('/my-tickets')}
                     variant="outline"
                     className="flex-1"
                   >
-                    View Your Bookings
+                    View My Tickets
                   </Button>
                   <Button
                     onClick={() => navigate('/')}

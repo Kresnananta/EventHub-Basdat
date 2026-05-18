@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { Calendar, MapPin, Users, ArrowRight, Search, Filter, Loader2 } from "lucide-react"
+import { Calendar, MapPin, Users, ArrowRight, Search, Filter, Loader2, ChevronDown } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 
 interface Event {
@@ -79,7 +79,7 @@ export function Landing() {
 
   useEffect(() => {
     async function fetchEvents() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('events')
         .select(`
           id, title, description, starts_at, location, banner_url,
@@ -137,7 +137,7 @@ export function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Navbar */}
       <Navbar />
 
@@ -155,7 +155,7 @@ export function Landing() {
         {/* Search & Filters */}
         <div className="mb-12 max-w-5xl mx-auto flex flex-col md:flex-row gap-4 animate-in fade-in duration-500 delay-150">
           <div className="relative grow">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search events by name or description..."
@@ -166,9 +166,9 @@ export function Landing() {
           </div>
           <div className="flex gap-4 w-full md:w-auto">
             <div className="relative w-full md:w-48">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Filter className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <select
-                className="h-12 pl-10 pr-10 py-2 bg-background/50 backdrop-blur-sm border border-border/50 rounded-full shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-position-[right_12px_center] bg-size-[16px_16px] cursor-pointer"
+                className="h-12 w-full cursor-pointer appearance-none rounded-full border border-border/50 bg-background/50 py-2 pr-10 pl-10 text-sm shadow-sm backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
@@ -176,11 +176,12 @@ export function Landing() {
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </div>
             <div className="relative w-full md:w-56">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <MapPin className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <select
-                className="h-12 pl-10 pr-10 py-2 bg-background/50 backdrop-blur-sm border border-border/50 rounded-full shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-position-[right_12px_center] bg-size-[16px_16px] cursor-pointer"
+                className="h-12 w-full cursor-pointer appearance-none rounded-full border border-border/50 bg-background/50 py-2 pr-10 pl-10 text-sm shadow-sm backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
               >
@@ -188,6 +189,7 @@ export function Landing() {
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
               </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </div>
           </div>
         </div>
