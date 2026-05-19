@@ -4,6 +4,13 @@ import { useEventContext } from "@/context/EventContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Ticket, ShoppingBag, Eye, Loader2 } from "lucide-react"
 
+const lastMonthComparison = "---%"
+const comparisonBadgeClass = "text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded mr-1.5"
+
+function formatRupiah(amount: number) {
+  return `Rp ${amount.toLocaleString("id-ID")}`
+}
+
 export function StatCards() {
   const { selectedEventId } = useEventContext()
   const [loading, setLoading] = useState(true)
@@ -46,7 +53,7 @@ export function StatCards() {
       }
 
       setStats({
-        sales: totalOrders,
+        sales: totalSales,
         orders: totalOrders,
         ticketsSold: soldTickets
       })
@@ -69,9 +76,9 @@ export function StatCards() {
         <CardContent>
           {loading ? <Loader2 className="w-5 h-5 animate-spin text-muted-foreground mt-2" /> : (
             <>
-              <div className="text-3xl font-bold text-foreground mt-2">Rp {(stats.sales / 1000).toLocaleString('id-ID')}K</div>
+              <div className="text-3xl font-bold text-foreground mt-2">{formatRupiah(stats.sales)}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <span className="text-emerald-600 font-medium bg-emerald-100 px-1.5 py-0.5 rounded mr-1.5">+--%</span>
+                <span className={comparisonBadgeClass}>{lastMonthComparison}</span>
                 from last month
               </p>
             </>
@@ -92,7 +99,7 @@ export function StatCards() {
             <>
               <div className="text-3xl font-bold text-foreground mt-2">{stats.orders}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <span className="text-emerald-600 font-medium bg-emerald-100 px-1.5 py-0.5 rounded mr-1.5">+--%</span>
+                <span className={comparisonBadgeClass}>{lastMonthComparison}</span>
                 from last month
               </p>
             </>
@@ -113,7 +120,7 @@ export function StatCards() {
             <>
               <div className="text-3xl font-bold text-foreground mt-2">{stats.ticketsSold}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <span className="text-emerald-600 font-medium bg-emerald-100 px-1.5 py-0.5 rounded mr-1.5">+--%</span>
+                <span className={comparisonBadgeClass}>{lastMonthComparison}</span>
                 from last month
               </p>
             </>
@@ -134,7 +141,7 @@ export function StatCards() {
             <>
               <div className="text-3xl font-bold text-foreground mt-2">2,845</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                <span className="text-red-600 font-medium bg-red-100 px-1.5 py-0.5 rounded mr-1.5">---%</span>
+                <span className={comparisonBadgeClass}>{lastMonthComparison}</span>
                 from last month
               </p>
             </>
