@@ -17,15 +17,30 @@ type RecentOrderRow = {
   } | null
 }
 
+type TicketRow = {
+  order_id: string
+}
+
+type RuntimeTableQuery<T> = {
+  select: (columns: string) => RuntimeTableQuery<T>
+  in: (column: string, values: string[]) => Promise<{ data: T[] | null; error: unknown }>
+}
+
+type RuntimeSupabase = {
+  from: <T>(table: string) => RuntimeTableQuery<T>
+}
+
 type RecentOrder = {
   id: string
   rawId: string
   customer: string
-  tickets: string
+  tickets: number | "-"
   total: string
   status: string
   date: string
 }
+
+const runtimeSupabase = supabase as unknown as RuntimeSupabase
 
 function formatOrderId(id: string) {
   return id.slice(0, 8).toUpperCase()
@@ -88,11 +103,27 @@ export function RecentOrders() {
         return
       }
 
-      const formattedOrders = ((data ?? []) as unknown as RecentOrderRow[]).map((order) => ({
+      const orderRows = (data ?? []) as unknown as RecentOrderRow[]
+      const orderIds = orderRows.map((order) => order.id)
+      const ticketsRes = orderIds.length
+        ? await runtimeSupabase.from<TicketRow>("tickets").select("order_id").in("order_id", orderIds)
+        : { data: [] as TicketRow[], error: null }
+
+      if (ticketsRes.error) {
+        console.error("Failed to load recent order tickets:", ticketsRes.error)
+      }
+
+      const ticketCounts = new Map<string, number>()
+
+      ;(ticketsRes.data ?? []).forEach((ticket) => {
+        ticketCounts.set(ticket.order_id, (ticketCounts.get(ticket.order_id) ?? 0) + 1)
+      })
+
+      const formattedOrders = orderRows.map((order) => ({
         id: formatOrderId(order.id),
         rawId: order.id,
         customer: order.profiles?.full_name || "Unknown Buyer",
-        tickets: "-",
+        tickets: ticketCounts.get(order.id) ?? "-",
         total: `${order.currency} ${order.total_amount.toLocaleString("id-ID")}`,
         status: formatStatus(order.status),
         date: formatDate(order.created_at),
