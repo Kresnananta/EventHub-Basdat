@@ -36,6 +36,10 @@ export function Attendees() {
 
     const { data, error } = await query
 
+    if (error) {
+      console.error("Error fetching attendees:", error)
+    }
+
     if (data) {
       let rawData = data;
 

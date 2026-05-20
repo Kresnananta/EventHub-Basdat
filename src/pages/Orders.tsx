@@ -132,7 +132,7 @@ export function Orders() {
           customer: item.profiles?.full_name || "Unknown Buyer",
           contact: item.profiles?.phone || "-",
           event: eventTitles.get(item.event_id) || "Unknown Event",
-          tickets: ticketCounts.get(item.id) ?? "-",
+          tickets: ticketCounts.get(item.id) ?? ("-" as const),
           total: `${item.currency} ${item.total_amount.toLocaleString('id-ID')}`,
           status: formatStatus(item.status),
           date: formatOrderDate(item.created_at)

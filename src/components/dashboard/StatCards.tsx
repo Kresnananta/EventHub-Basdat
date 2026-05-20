@@ -4,8 +4,22 @@ import { useEventContext } from "@/context/EventContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Ticket, ShoppingBag, Eye, Loader2 } from "lucide-react"
 
+type TicketRow = {
+  order_id: string
+}
+
+type RuntimeTableQuery<T> = {
+  select: (columns: string) => RuntimeTableQuery<T>
+  in: (column: string, values: string[]) => Promise<{ data: T[] | null; error: unknown }>
+}
+
+type RuntimeSupabase = {
+  from: <T>(table: string) => RuntimeTableQuery<T>
+}
+
 const lastMonthComparison = "---%"
 const comparisonBadgeClass = "text-muted-foreground font-medium bg-muted px-1.5 py-0.5 rounded mr-1.5"
+const runtimeSupabase = supabase as unknown as RuntimeSupabase
 
 function formatRupiah(amount: number) {
   return `Rp ${amount.toLocaleString("id-ID")}`
@@ -24,32 +38,36 @@ export function StatCards() {
     async function fetchStats() {
       setLoading(true)
 
-      let ordersQuery = supabase.from('orders').select('total_amount, status, event_id')
-      let ticketsQuery = supabase.from('tickets').select('sold, event_id')
+      let ordersQuery = supabase.from('orders').select('id, total_amount, status, event_id')
 
       if (selectedEventId) {
         ordersQuery = ordersQuery.eq('event_id', selectedEventId)
-        ticketsQuery = ticketsQuery.eq('event_id', selectedEventId)
       }
 
-      const [ordersRes, ticketRes] = await Promise.all([ordersQuery, ticketsQuery])
+      const ordersRes = await ordersQuery
 
       let totalSales = 0
       let totalOrders = 0
+      const paidOrderIds: string[] = []
+
       if (ordersRes.data) {
         ordersRes.data.forEach((o) => {
           if (o.status?.toLowerCase() === 'paid' || o.status?.toLowerCase() === 'completed') {
             totalSales += Number(o.total_amount || 0)
             totalOrders++
+            paidOrderIds.push(o.id)
           }
         })
       }
 
       let soldTickets = 0
-      if (ticketRes.data) {
-        ticketRes.data.forEach((t) => {
-          soldTickets += Number(t.sold || 0)
-        })
+      if (paidOrderIds.length > 0) {
+        const ticketRes = await runtimeSupabase
+          .from<TicketRow>('tickets')
+          .select('order_id')
+          .in('order_id', paidOrderIds)
+
+        soldTickets = ticketRes.data?.length ?? 0
       }
 
       setStats({

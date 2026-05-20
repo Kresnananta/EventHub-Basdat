@@ -13,6 +13,7 @@ import { Login } from './pages/Login'
 import { Profile } from './pages/Profile'
 import { MyTickets } from './pages/MyTickets'
 import { TicketDetail } from './pages/TicketDetail'
+import { CheckIn } from './pages/CheckIn'
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
               <Route path='tickets' element={<Tickets />} />
               <Route path='orders' element={<Orders />} />
               <Route path='attendees' element={<Attendees />} />
+              <Route path='check-in' element={<CheckIn />} />
             </Route>
           </Route>
 

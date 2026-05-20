@@ -35,6 +35,9 @@ export function Tickets() {
       }
 
       const { data, error } = await query
+      if (error) {
+        console.error("Error fetching tickets:", error)
+      }
       if (data) setTickets(data)
       setLoading(false)
     }
