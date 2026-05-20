@@ -8,19 +8,69 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Filter, FileDown, Loader2 } from "lucide-react"
 
-// const dummyOrders = [
-//   { id: "ORD-1234", customer: "Warren Buffet", email: "warren@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 3,000,000", status: "Completed", date: "Today, 10:24 AM" },
-//   { id: "ORD-1235", customer: "Rusdi", email: "rusdi@example.com", event: "Google I/O 2026", tickets: 1, total: "Rp 750,000", status: "Pending", date: "Today, 09:15 AM" },
-//   { id: "ORD-1236", customer: "Jerome Polin", email: "jerome@example.com", event: "Tech Startup Conference", tickets: 4, total: "Rp 3,000,000", status: "Completed", date: "Yesterday" },
-//   { id: "ORD-1237", customer: "Milea", email: "milea@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 1,500,000", status: "Completed", date: "Yesterday" },
-//   { id: "ORD-1238", customer: "Joko Anwar", email: "joko@example.com", event: "Tech Startup Conference", tickets: 5, total: "Rp 2,500,000", status: "Cancelled", date: "23 Apr 2026" },
-//   { id: "ORD-1239", customer: "Aldi Taher", email: "aldi@example.com", event: "Google I/O 2026", tickets: 2, total: "Rp 1,500,000", status: "Completed", date: "22 Apr 2026" },
-// ]
+type OrderRow = {
+  id: string
+  event_id: string
+  status: string
+  total_amount: number
+  currency: string
+  created_at: string
+  profiles: {
+    full_name: string | null
+    phone: string | null
+  } | null
+}
+
+type EventRow = {
+  id: string
+  title: string
+}
+
+type TicketRow = {
+  order_id: string
+}
+
+type RuntimeTableQuery<T> = {
+  select: (columns: string) => RuntimeTableQuery<T>
+  in: (column: string, values: string[]) => Promise<{ data: T[] | null; error: unknown }>
+}
+
+type RuntimeSupabase = {
+  from: <T>(table: string) => RuntimeTableQuery<T>
+}
+
+type DashboardOrder = {
+  id: string
+  rawId: string
+  customer: string
+  contact: string
+  event: string
+  tickets: number | "-"
+  total: string
+  status: string
+  date: string
+}
+
+const runtimeSupabase = supabase as unknown as RuntimeSupabase
+
+function formatStatus(status: string) {
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function formatOrderDate(date: string) {
+  return new Date(date).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 export function Orders() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
-  const [orders, setOrders] = useState<any[]>([])
+  const [orders, setOrders] = useState<DashboardOrder[]>([])
   const { selectedEventId } = useEventContext()
 
   useEffect(() => {
@@ -30,9 +80,8 @@ export function Orders() {
       let query = supabase
         .from('orders')
         .select(`
-        id, status, total_amount, currency, created_at,
+        id, event_id, status, total_amount, currency, created_at,
         profiles ( full_name, phone )
-        events ( title )
       `)
         .order('created_at', { ascending: false })
 
@@ -42,18 +91,51 @@ export function Orders() {
 
       const { data, error } = await query
 
+      if (error) {
+        console.error("Error fetching orders:", error)
+        setOrders([])
+        setLoading(false)
+        return
+      }
+
       if (data) {
-        // Karena data asli database agak berantakan, kita format (mapping) agar cocok & cantik untuk Tabel UI
-        const formattedOrders = data.map((item: any) => ({
+        const orderRows = data as unknown as OrderRow[]
+        const eventIds = [...new Set(orderRows.map((order) => order.event_id).filter(Boolean))]
+        const orderIds = orderRows.map((order) => order.id)
+        const [eventsRes, ticketsRes] = await Promise.all([
+          eventIds.length
+            ? supabase.from('events').select('id, title').in('id', eventIds)
+            : Promise.resolve({ data: [] as EventRow[], error: null }),
+          orderIds.length
+            ? runtimeSupabase.from<TicketRow>('tickets').select('order_id').in('order_id', orderIds)
+            : Promise.resolve({ data: [] as TicketRow[], error: null }),
+        ])
+
+        if (eventsRes.error) {
+          console.error("Error fetching order events:", eventsRes.error)
+        }
+
+        if (ticketsRes.error) {
+          console.error("Error fetching order tickets:", ticketsRes.error)
+        }
+
+        const eventTitles = new Map((eventsRes.data ?? []).map((event) => [event.id, event.title]))
+        const ticketCounts = new Map<string, number>()
+
+        ;(ticketsRes.data ?? []).forEach((ticket) => {
+          ticketCounts.set(ticket.order_id, (ticketCounts.get(ticket.order_id) ?? 0) + 1)
+        })
+
+        const formattedOrders = orderRows.map((item) => ({
           id: item.id.substring(0, 8).toUpperCase(), // Potong ID UUID yang sangat panjang menjadi 8 digit awal saja
           rawId: item.id,
           customer: item.profiles?.full_name || "Unknown Buyer",
           contact: item.profiles?.phone || "-",
-          event: item.events?.title || "Unknown Event",
-          tickets: "-", // Di database belum ada kolom total kuantitas tiket, jadi kita strip sementara
+          event: eventTitles.get(item.event_id) || "Unknown Event",
+          tickets: ticketCounts.get(item.id) ?? "-",
           total: `${item.currency} ${item.total_amount.toLocaleString('id-ID')}`,
-          status: item.status.charAt(0).toUpperCase() + item.status.slice(1),
-          date: new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          status: formatStatus(item.status),
+          date: formatOrderDate(item.created_at)
         }))
         setOrders(formattedOrders)
       }
