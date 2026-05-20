@@ -123,7 +123,7 @@ export function RecentOrders() {
         id: formatOrderId(order.id),
         rawId: order.id,
         customer: order.profiles?.full_name || "Unknown Buyer",
-        tickets: ticketCounts.get(order.id) ?? "-",
+        tickets: ticketCounts.get(order.id) ?? ("-" as const),
         total: `${order.currency} ${order.total_amount.toLocaleString("id-ID")}`,
         status: formatStatus(order.status),
         date: formatDate(order.created_at),

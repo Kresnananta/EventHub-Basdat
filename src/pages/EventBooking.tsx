@@ -193,6 +193,11 @@ useEffect(() => {
       return
     }
 
+    if (!eventId || !ticketTypeId) {
+      alert("Data event atau tiket tidak valid.")
+      return
+    }
+
     if (formData.firstName && formData.lastName && formData.email && formData.phone) {
 
       setIsSubmitting(true)

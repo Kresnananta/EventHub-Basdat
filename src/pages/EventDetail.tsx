@@ -114,6 +114,10 @@ export function EventDetail() {
         .eq('id', eventId)
         .single()
 
+      if (error) {
+        console.error("Error fetching event details:", error)
+      }
+
       if (data) {
         let totalCapacity = 0;
         let totalSold = 0;

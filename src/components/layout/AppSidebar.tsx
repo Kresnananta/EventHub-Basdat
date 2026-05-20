@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown } from "lucide-react"
+import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
 
 
 const menuItems = [
@@ -32,16 +32,21 @@ const menuItems = [
 ]
 
 const eventTools = [
-  { title: "Check-in", url: "#", icon: Users },
+  { title: "Check-in", url: "/dashboard/check-in", icon: QrCode },
   { title: "Surveys", url: "#", icon: PieChart },
   { title: "Widgets", url: "#", icon: Settings },
 ]
+
+type EventOption = {
+  id: string
+  title: string
+}
 
 export function AppSidebar() {
   const location = useLocation();
 
   const { selectedEventName, setEventContext } = useEventContext();
-  const [eventsData, setEventsData] = useState<any[]>([]);
+  const [eventsData, setEventsData] = useState<EventOption[]>([]);
 
   useEffect(() => {
     async function fetchEvents() {
@@ -49,6 +54,11 @@ export function AppSidebar() {
         .from("events")
         .select("id, title")
         .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Failed to load sidebar events:", error);
+        return;
+      }
 
       if (data) {
         setEventsData(data);

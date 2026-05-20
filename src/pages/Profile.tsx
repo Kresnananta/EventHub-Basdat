@@ -8,7 +8,7 @@ import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Upload, Mail, Phone, User, Calendar, Shield, LogOut } from "lucide-react"
+import { Loader2, Upload, Mail, User, Calendar, Shield, LogOut } from "lucide-react"
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase-client'
 
