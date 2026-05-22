@@ -17,8 +17,8 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace />
   }
 
-  if (profile?.role !== 'organizer') {
-    // Usir kembali ke Landing Page jika bukan organizer
+  if (profile?.role !== 'organizer' && profile?.role !== 'admin') {
+    // Usir kembali ke Landing Page jika bukan organizer/admin
     return <Navigate to="/" replace />
   }
 

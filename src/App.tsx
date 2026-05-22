@@ -14,6 +14,7 @@ import { Profile } from './pages/Profile'
 import { MyTickets } from './pages/MyTickets'
 import { TicketDetail } from './pages/TicketDetail'
 import { CheckIn } from './pages/CheckIn'
+import { CreateEvent } from './pages/CreateEvent'
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path='/dashboard' element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path='create-event' element={<CreateEvent />} />
               <Route path='tickets' element={<Tickets />} />
               <Route path='orders' element={<Orders />} />
               <Route path='attendees' element={<Attendees />} />

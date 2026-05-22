@@ -86,7 +86,7 @@ export function Landing() {
           categories ( name ),
           ticket_tiers ( quantity, sold )
         `)
-      // Opsional: .eq('status', 'published') jika hanya ingin menampilkan yg published
+        .eq('status', 'published')
 
       if (data) {
         const formatted = data.map((e: any) => {

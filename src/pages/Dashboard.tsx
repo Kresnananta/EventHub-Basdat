@@ -3,8 +3,11 @@ import { SalesChart } from "../components/dashboard/SalesChart"
 import { RecentOrders } from "../components/dashboard/RecentOrders"
 import { Button } from "@/components/ui/button"
 import { ExternalLink, Plus } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 export function Dashboard() {
+  const navigate = useNavigate()
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -13,11 +16,11 @@ export function Dashboard() {
           <p className="text-muted-foreground mt-1">Welcome back! Here's an overview of your events today.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2 bg-white hover:bg-muted font-medium">
+          <Button variant="outline" className="gap-2 bg-white hover:bg-muted font-medium" onClick={() => navigate("/")}>
             <ExternalLink size={16} />
             View Event Page
           </Button>
-          <Button className="gap-2 shadow-sm font-medium">
+          <Button className="gap-2 shadow-sm font-medium" onClick={() => navigate("/dashboard/create-event")}>
             <Plus size={16} />
             Create Event
           </Button>
