@@ -112,6 +112,7 @@ export function EventDetail() {
           ticket_tiers ( id, name, price, quantity, sold )
         `)
         .eq('id', eventId)
+        .eq('status', 'published')
         .single()
 
       if (error) {
