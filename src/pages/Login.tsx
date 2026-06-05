@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Ticket, Mail, Lock, ArrowRight } from "lucide-react"
 
+const getAuthRedirectUrl = () => {
+  const configuredUrl = import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined
+  const baseUrl = configuredUrl?.trim().replace(/\/+$/, "") || window.location.origin
+
+  return `${baseUrl}/`
+}
+
 export function Login() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
@@ -55,7 +62,7 @@ export function Login() {
           password,
           options: {
             data: { full_name: fullName.trim() },
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: getAuthRedirectUrl(),
           }
         })
 
@@ -96,7 +103,7 @@ export function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/`
+        redirectTo: getAuthRedirectUrl()
       }
     })
     if (error) setErrorMsg(error.message)
