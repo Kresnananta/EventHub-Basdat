@@ -41,6 +41,8 @@ type PaymentOrder = {
   } | null
 }
 
+const PAYMENT_WINDOW_MINUTES = 10
+
 type TicketRow = {
   order_id: string
 }
@@ -104,9 +106,20 @@ function formatTimeLeft(milliseconds: number) {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+function getDemoExpiry(order: PaymentOrder) {
+  return new Date(order.created_at).getTime() + PAYMENT_WINDOW_MINUTES * 60 * 1000
+}
+
 function buildPaymentRef(method: PaymentMethod, orderId: string) {
   const prefix = method === 'bank_transfer' ? 'SIM-BANK' : method === 'e_wallet' ? 'SIM-WALLET' : 'SIM-CARD'
   return `${prefix}-${orderId.slice(0, 8).toUpperCase()}`
+}
+
+function isMissingRpcError(error: unknown) {
+  if (!error || typeof error !== 'object' || !('message' in error)) return false
+
+  const message = String((error as { message?: unknown }).message).toLowerCase()
+  return message.includes('could not find the function') || message.includes('does not exist')
 }
 
 function getPaymentInstruction(method: PaymentMethod, orderId: string) {
@@ -218,11 +231,19 @@ export function Payment() {
     void fetchOrder()
   }, [orderId, session?.user?.id])
 
-  const expiresAt = order?.expires_at ? new Date(order.expires_at).getTime() : null
+  const isAwaitingDemoPayment = Boolean(order && order.status === 'paid' && !order.payment_ref && !order.payment_method)
+  const effectiveStatus = isAwaitingDemoPayment ? 'pending' : order?.status
+  const expiresAt = order
+    ? isAwaitingDemoPayment
+      ? getDemoExpiry(order)
+      : order.expires_at
+        ? new Date(order.expires_at).getTime()
+        : null
+    : null
   const timeLeftMs = expiresAt ? expiresAt - now : 0
-  const isExpired = order?.status === 'pending' && expiresAt !== null && timeLeftMs <= 0
-  const isPaid = order?.status === 'paid'
-  const canConfirm = Boolean(order && order.status === 'pending' && !isExpired)
+  const isExpired = effectiveStatus === 'pending' && expiresAt !== null && timeLeftMs <= 0
+  const isPaid = effectiveStatus === 'paid'
+  const canConfirm = Boolean(order && effectiveStatus === 'pending' && !isExpired)
   const selectedInstruction = useMemo(
     () => (order ? getPaymentInstruction(selectedMethod, order.id) : null),
     [order, selectedMethod]
@@ -258,18 +279,44 @@ export function Payment() {
     setIsConfirming(true)
     setErrorMessage('')
 
+    const confirmedAt = new Date().toISOString()
+    const { data: rpcData, error: rpcError } = await supabase.rpc('confirm_demo_payment', {
+      p_order_id: order.id,
+      p_payment_method: selectedMethod,
+    })
+
+    if (!rpcError && rpcData) {
+      setOrder({
+        ...order,
+        status: rpcData.status,
+        payment_method: rpcData.payment_method,
+        payment_ref: rpcData.payment_ref,
+        paid_at: rpcData.paid_at,
+        expires_at: rpcData.expires_at,
+      })
+      setIsConfirming(false)
+      return
+    }
+
+    if (rpcError && !isMissingRpcError(rpcError)) {
+      console.error('Failed to confirm demo payment:', rpcError)
+      setErrorMessage(rpcError.message || 'Payment could not be confirmed. Please try again.')
+      setIsConfirming(false)
+      return
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .update({
         status: 'paid',
         payment_method: selectedMethod,
         payment_ref: buildPaymentRef(selectedMethod, order.id),
-        paid_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        paid_at: confirmedAt,
+        updated_at: confirmedAt,
       })
       .eq('id', order.id)
       .eq('buyer_id', order.buyer_id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'paid'])
       .select(`
         id,
         buyer_id,
@@ -346,21 +393,21 @@ export function Payment() {
               Back to Events
             </Button>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Complete Payment</h1>
-            <p className="mt-2 text-muted-foreground">Finish this order now, or come back before the payment window ends.</p>
+            <p className="mt-2 text-muted-foreground">Finish this order now, or come back before the {PAYMENT_WINDOW_MINUTES} minute payment window ends.</p>
           </div>
 
           <div className="flex items-center gap-2">
             <Badge
-              variant={isPaid ? 'default' : order.status === 'pending' ? 'secondary' : 'destructive'}
+              variant={isPaid ? 'default' : effectiveStatus === 'pending' ? 'secondary' : 'destructive'}
               className={
                 isPaid
                   ? 'bg-emerald-500 text-white hover:bg-emerald-500'
-                  : order.status === 'pending'
+                  : effectiveStatus === 'pending'
                     ? 'bg-amber-100 text-amber-800 hover:bg-amber-100'
                     : 'bg-red-100 text-red-800 hover:bg-red-100'
               }
             >
-              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              {effectiveStatus ? effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1) : '-'}
             </Badge>
           </div>
         </div>
@@ -519,7 +566,7 @@ export function Payment() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {order.expires_at ? (
+                {expiresAt ? (
                   <>
                     <div className={`rounded-lg border p-4 text-center ${isExpired ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
                       <p className={`font-mono text-3xl font-bold ${isExpired ? 'text-red-700' : 'text-amber-800'}`}>
@@ -529,7 +576,7 @@ export function Payment() {
                         {isPaid ? 'Payment completed' : isExpired ? 'Expired' : 'Time remaining'}
                       </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">Expires at {formatDate(order.expires_at)}</p>
+                    <p className="text-sm text-muted-foreground">Expires at {formatDate(new Date(expiresAt).toISOString())}</p>
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">No expiration time was set for this order.</p>

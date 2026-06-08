@@ -36,6 +36,12 @@ function getBookedOrderId(data: unknown): string | null {
   return null
 }
 
+function getPaymentExpiry() {
+  const expiresAt = new Date()
+  expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+  return expiresAt.toISOString()
+}
+
 // const eventData: Record<string, any> = {
 //   "E-001": {
 //     name: "Google I/O 2026",
@@ -241,6 +247,27 @@ useEffect(() => {
           const orderId = getBookedOrderId(data)
 
           if (orderId) {
+            const { data: paymentSetup, error: paymentSetupError } = await supabase
+              .from('orders')
+              .update({
+                status: 'pending',
+                payment_method: null,
+                payment_ref: null,
+                paid_at: null,
+                expires_at: getPaymentExpiry(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', orderId)
+              .eq('buyer_id', session.user.id)
+              .select('id, status, expires_at, payment_method, payment_ref')
+              .maybeSingle()
+
+            if (paymentSetupError) {
+              console.error('Payment Setup Error:', paymentSetupError)
+            } else if (!paymentSetup) {
+              console.warn('Payment setup did not update any order. The payment page will use demo-pending mode.', { orderId })
+            }
+
             navigate(`/payment/${orderId}`)
           } else {
             setStep('confirmation')

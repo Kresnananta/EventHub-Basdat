@@ -425,6 +425,13 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_demo_payment: {
+        Args: {
+          p_order_id: string
+          p_payment_method: string
+        }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
       admin_update_profile_role: {
         Args: {
           p_profile_id: string

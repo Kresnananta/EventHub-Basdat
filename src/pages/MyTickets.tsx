@@ -11,6 +11,9 @@ import { useNavigate } from 'react-router-dom'
 
 interface TicketData {
   id: string
+  order_id: string
+  order_status: string
+  order_expires_at: string | null
   ticket_code: string
   status: string
   checked_in_at: string | null
@@ -28,7 +31,7 @@ export function MyTickets() {
   const { session, loading: authLoading } = useAuth()
   const [tickets, setTickets] = useState<TicketData[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'active' | 'used' | 'expired'>('all')
+  const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'used' | 'expired'>('all')
   const [selectedQrTicket, setSelectedQrTicket] = useState<TicketData | null>(null)
 
   useEffect(() => {
@@ -63,6 +66,9 @@ export function MyTickets() {
             event_id
           ),
           orders (
+            id,
+            status,
+            expires_at,
             event_id,
             events (
               title,
@@ -85,6 +91,9 @@ export function MyTickets() {
 
       const formatted = (data || []).map((ticket: any) => ({
         id: ticket.id,
+        order_id: ticket.orders?.id || ticket.order_id,
+        order_status: ticket.orders?.status || 'pending',
+        order_expires_at: ticket.orders?.expires_at || null,
         ticket_code: ticket.ticket_code,
         status: ticket.status,
         checked_in_at: ticket.checked_in_at,
@@ -120,9 +129,10 @@ export function MyTickets() {
   }
 
   const filteredTickets = tickets.filter(ticket => {
-    if (filter === 'active') return ticket.status === 'active' && !ticket.checked_in_at
+    if (filter === 'paid') return ticket.order_status === 'paid' && ticket.status === 'active' && !ticket.checked_in_at
+    if (filter === 'pending') return ticket.order_status === 'pending'
     if (filter === 'used') return ticket.checked_in_at !== null
-    if (filter === 'expired') return ticket.status === 'expired'
+    if (filter === 'expired') return ticket.status === 'expired' || ticket.order_status === 'cancelled' || ticket.order_status === 'refunded'
     return true
   })
 
@@ -135,11 +145,19 @@ export function MyTickets() {
         </Badge>
       )
     }
-    if (ticket.status === 'active') {
+    if (ticket.order_status === 'pending') {
+      return (
+        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+          <Clock size={14} className="mr-1" />
+          Pending
+        </Badge>
+      )
+    }
+    if (ticket.order_status === 'paid' && ticket.status === 'active') {
       return (
         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
           <Ticket size={14} className="mr-1" />
-          Active
+          Paid
         </Badge>
       )
     }
@@ -172,7 +190,7 @@ export function MyTickets() {
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-6">
-          {(['all', 'active', 'used', 'expired'] as const).map(f => (
+          {(['all', 'paid', 'pending', 'used', 'expired'] as const).map(f => (
             <Button
               key={f}
               variant={filter === f ? 'default' : 'outline'}
@@ -180,7 +198,7 @@ export function MyTickets() {
               onClick={() => setFilter(f)}
               className="capitalize"
             >
-              {f === 'all' ? 'All Tickets' : f === 'active' ? 'Active' : f === 'used' ? 'Used' : 'Expired'}
+              {f === 'all' ? 'All Tickets' : f === 'paid' ? 'Paid' : f === 'pending' ? 'Pending' : f === 'used' ? 'Used' : 'Expired'}
             </Button>
           ))}
         </div>
@@ -212,11 +230,11 @@ export function MyTickets() {
                 key={ticket.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/ticket/${ticket.id}`)}
+                onClick={() => navigate(ticket.order_status === 'pending' ? `/payment/${ticket.order_id}` : `/ticket/${ticket.id}`)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
-                    navigate(`/ticket/${ticket.id}`)
+                    navigate(ticket.order_status === 'pending' ? `/payment/${ticket.order_id}` : `/ticket/${ticket.id}`)
                   }
                 }}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -257,8 +275,20 @@ export function MyTickets() {
 
                   {/* Ticket Code */}
                   <div className="bg-slate-50 p-3 rounded-lg border border-border">
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">Ticket Code</p>
-                    <p className="font-mono font-bold text-foreground break-all">{ticket.ticket_code}</p>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">
+                      {ticket.order_status === 'pending' ? 'Payment Status' : 'Ticket Code'}
+                    </p>
+                    <p className="font-mono font-bold text-foreground break-all">
+                      {ticket.order_status === 'pending' ? 'Awaiting payment' : ticket.ticket_code}
+                    </p>
+                    {ticket.order_status === 'pending' && ticket.order_expires_at && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Pay before {new Date(ticket.order_expires_at).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    )}
                   </div>
 
                   {/* Check-in Status */}
@@ -278,35 +308,50 @@ export function MyTickets() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 gap-1"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        setSelectedQrTicket(ticket)
-                      }}
-                    >
-                      <QrCode size={16} />
-                      <span>Show QR code</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 gap-1"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        navigate(`/ticket/${ticket.id}`)
-                      }}
-                    >
-                      <Download size={16} />
-                      <span className="hidden sm:inline">Download</span>
-                    </Button>
-                  </div>
+                  {ticket.order_status === 'pending' ? (
+                    <div className="pt-2">
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          navigate(`/payment/${ticket.order_id}`)
+                        }}
+                      >
+                        Continue Payment
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-1"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setSelectedQrTicket(ticket)
+                        }}
+                      >
+                        <QrCode size={16} />
+                        <span>Show QR code</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-1"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          navigate(`/ticket/${ticket.id}`)
+                        }}
+                      >
+                        <Download size={16} />
+                        <span className="hidden sm:inline">Download</span>
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-end text-xs font-medium text-primary">
-                    View ticket
+                    {ticket.order_status === 'pending' ? 'Continue payment' : 'View ticket'}
                     <ArrowRight size={14} className="ml-1" />
                   </div>
                 </CardContent>
