@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Image, Loader2, MapPin, Save, Search } from "lucide-react"
+import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Image, Loader2, MapPin, Save, Search, Upload, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/context/AuthContext"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase-client"
+import { getEventBannerValidationError, uploadEventBanner } from "@/lib/event-banners"
+import { getErrorMessage } from "@/lib/errors"
 
 type VenueOption = {
   id: string
@@ -67,10 +69,13 @@ export function EditEvent() {
   const [description, setDescription] = useState("")
   const [categoryName, setCategoryName] = useState("")
   const [bannerUrl, setBannerUrl] = useState("")
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState("")
   const [startsAt, setStartsAt] = useState("")
   const [endsAt, setEndsAt] = useState("")
   const [status, setStatus] = useState("draft")
   const [selectedVenueId, setSelectedVenueId] = useState("")
+  const [organizerId, setOrganizerId] = useState("")
 
   const selectedVenue = useMemo(
     () => venues.find((venue) => venue.id === selectedVenueId) ?? null,
@@ -130,6 +135,7 @@ export function EditEvent() {
 
       setVenues(venuesResult.data ?? [])
       setTitle(event.title)
+      setOrganizerId(event.organizer_id)
       setDescription(event.description || "")
       setCategoryName(event.categories?.name || "")
       setBannerUrl(event.banner_url || "")
@@ -143,6 +149,37 @@ export function EditEvent() {
 
     void loadForm()
   }, [eventId, profile?.role, user])
+
+  useEffect(() => {
+    if (!bannerFile) {
+      setBannerPreviewUrl("")
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(bannerFile)
+    setBannerPreviewUrl(objectUrl)
+
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [bannerFile])
+
+  const bannerPreview = bannerPreviewUrl || bannerUrl.trim()
+
+  function handleBannerFileChange(file: File | null) {
+    setErrorMessage("")
+
+    if (!file) {
+      setBannerFile(null)
+      return
+    }
+
+    const validationError = getEventBannerValidationError(file)
+    if (validationError) {
+      setErrorMessage(validationError)
+      return
+    }
+
+    setBannerFile(file)
+  }
 
   async function resolveCategoryId() {
     const name = categoryName.trim()
@@ -172,7 +209,7 @@ export function EditEvent() {
     event.preventDefault()
     setErrorMessage("")
 
-    if (!eventId || !selectedVenue) {
+    if (!eventId || !selectedVenue || !organizerId) {
       setErrorMessage("Choose a valid venue.")
       return
     }
@@ -198,6 +235,17 @@ export function EditEvent() {
 
     try {
       const categoryId = await resolveCategoryId()
+      let resolvedBannerUrl = bannerUrl.trim() || null
+
+      if (bannerFile) {
+        const uploadedBanner = await uploadEventBanner({
+          eventId,
+          file: bannerFile,
+          organizerId,
+        })
+        resolvedBannerUrl = uploadedBanner.publicUrl
+      }
+
       const { error } = await supabase
         .from("events")
         .update({
@@ -205,7 +253,7 @@ export function EditEvent() {
           description: description.trim() || null,
           category_id: categoryId,
           venue_id: selectedVenue.id,
-          banner_url: bannerUrl.trim() || null,
+          banner_url: resolvedBannerUrl,
           starts_at: new Date(startsAt).toISOString(),
           ends_at: endsAt ? new Date(endsAt).toISOString() : null,
           status,
@@ -213,10 +261,10 @@ export function EditEvent() {
         })
         .eq("id", eventId)
 
-      if (error) throw error
+      if (error) throw new Error(getErrorMessage(error, "Event could not be updated."))
       navigate("/dashboard/events")
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Event could not be updated.")
+      setErrorMessage(getErrorMessage(error, "Event could not be updated."))
     } finally {
       setSaving(false)
     }
@@ -279,6 +327,50 @@ export function EditEvent() {
                     <Input id="editBanner" value={bannerUrl} onChange={(event) => setBannerUrl(event.target.value)} className="pl-9" />
                   </div>
                 </div>
+              </div>
+              <div className="grid gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <Label htmlFor="editBannerUpload">Upload banner</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">JPG, PNG, or WebP. Max 5MB.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="gap-2" asChild>
+                      <label htmlFor="editBannerUpload" className="cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        Choose image
+                      </label>
+                    </Button>
+                    {bannerFile && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setBannerFile(null)} aria-label="Remove selected banner">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <input
+                  id="editBannerUpload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(event) => handleBannerFileChange(event.target.files?.[0] ?? null)}
+                />
+                {bannerPreview ? (
+                  <img
+                    src={bannerPreview}
+                    alt="Event banner preview"
+                    className="aspect-video w-full rounded-lg border border-border object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+                    No banner selected
+                  </div>
+                )}
+                {bannerFile && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    Selected: {bannerFile.name}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

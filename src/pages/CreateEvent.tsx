@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Image, Loader2, MapPin, Plus, Save, Search, Send, Ticket, Trash2 } from "lucide-react"
+import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Image, Loader2, MapPin, Plus, Save, Search, Send, Ticket, Trash2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase-client"
 import { useAuth } from "@/context/AuthContext"
 import { cn } from "@/lib/utils"
+import { getEventBannerValidationError, uploadEventBanner } from "@/lib/event-banners"
+import { getErrorMessage } from "@/lib/errors"
 
 type TicketTierForm = {
   name: string
@@ -53,6 +55,8 @@ export function CreateEvent() {
   const [description, setDescription] = useState("")
   const [categoryName, setCategoryName] = useState("")
   const [bannerUrl, setBannerUrl] = useState("")
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState("")
   const [startsAt, setStartsAt] = useState("")
   const [endsAt, setEndsAt] = useState("")
   const [venues, setVenues] = useState<VenueOption[]>([])
@@ -124,6 +128,37 @@ export function CreateEvent() {
 
     void fetchVenues()
   }, [])
+
+  useEffect(() => {
+    if (!bannerFile) {
+      setBannerPreviewUrl("")
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(bannerFile)
+    setBannerPreviewUrl(objectUrl)
+
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [bannerFile])
+
+  const bannerPreview = bannerPreviewUrl || bannerUrl.trim()
+
+  function handleBannerFileChange(file: File | null) {
+    setErrorMessage("")
+
+    if (!file) {
+      setBannerFile(null)
+      return
+    }
+
+    const validationError = getEventBannerValidationError(file)
+    if (validationError) {
+      setErrorMessage(validationError)
+      return
+    }
+
+    setBannerFile(file)
+  }
 
   function updateTicketTier(index: number, field: keyof TicketTierForm, value: string) {
     setTicketTiers((current) =>
@@ -240,7 +275,7 @@ export function CreateEvent() {
           venue_id: selectedVenue.id,
           title: title.trim(),
           description: description.trim() || null,
-          banner_url: bannerUrl.trim() || null,
+          banner_url: bannerFile ? null : bannerUrl.trim() || null,
           starts_at: toTimestamp(startsAt),
           ends_at: endsAt ? toTimestamp(endsAt) : null,
           status,
@@ -249,7 +284,27 @@ export function CreateEvent() {
         .select("id")
         .single()
 
-      if (eventError) throw eventError
+      if (eventError) throw new Error(getErrorMessage(eventError, "Event failed to be saved."))
+
+      if (bannerFile) {
+        const uploadedBanner = await uploadEventBanner({
+          eventId: createdEvent.id,
+          file: bannerFile,
+          organizerId: user.id,
+        })
+
+        const { error: bannerUpdateError } = await supabase
+          .from("events")
+          .update({
+            banner_url: uploadedBanner.publicUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", createdEvent.id)
+
+        if (bannerUpdateError) {
+          throw new Error(getErrorMessage(bannerUpdateError, "Banner URL failed to be saved."))
+        }
+      }
 
       const { error: ticketError } = await supabase.from("ticket_tiers").insert(
         validTicketTiers.map((tier) => ({
@@ -262,12 +317,11 @@ export function CreateEvent() {
         }))
       )
 
-      if (ticketError) throw ticketError
+      if (ticketError) throw new Error(getErrorMessage(ticketError, "Ticket tiers failed to be saved."))
 
       navigate(status === "published" ? `/event/${createdEvent.id}` : "/dashboard")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Event failed to be saved."
-      setErrorMessage(message)
+      setErrorMessage(getErrorMessage(error, "Event failed to be saved."))
     } finally {
       setSubmittingStatus(null)
     }
@@ -352,6 +406,51 @@ export function CreateEvent() {
                     />
                   </div>
                 </div>
+              </div>
+
+              <div className="grid gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <Label htmlFor="bannerUpload">Upload banner</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">JPG, PNG, or WebP. Max 5MB.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="gap-2" asChild>
+                      <label htmlFor="bannerUpload" className="cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        Choose image
+                      </label>
+                    </Button>
+                    {bannerFile && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setBannerFile(null)} aria-label="Remove selected banner">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <input
+                  id="bannerUpload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(event) => handleBannerFileChange(event.target.files?.[0] ?? null)}
+                />
+                {bannerPreview ? (
+                  <img
+                    src={bannerPreview}
+                    alt="Event banner preview"
+                    className="aspect-video w-full rounded-lg border border-border object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+                    No banner selected
+                  </div>
+                )}
+                {bannerFile && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    Selected: {bannerFile.name}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
