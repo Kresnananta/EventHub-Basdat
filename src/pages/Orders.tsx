@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Filter, FileDown, Loader2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { getScopedEventIds } from "@/lib/dashboard-scope"
 
 type OrderRow = {
   id: string
@@ -72,10 +74,23 @@ export function Orders() {
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<DashboardOrder[]>([])
   const { selectedEventId } = useEventContext()
+  const { profile, user } = useAuth()
 
   useEffect(() => {
     async function fetchOrders() {
       setLoading(true)
+
+      const scopedEventIds = await getScopedEventIds({
+        role: profile?.role,
+        selectedEventId,
+        userId: user?.id,
+      })
+
+      if (scopedEventIds?.length === 0) {
+        setOrders([])
+        setLoading(false)
+        return
+      }
 
       let query = supabase
         .from('orders')
@@ -85,8 +100,8 @@ export function Orders() {
       `)
         .order('created_at', { ascending: false })
 
-      if (selectedEventId) {
-        query = query.eq('event_id', selectedEventId)
+      if (scopedEventIds) {
+        query = query.in('event_id', scopedEventIds)
       }
 
       const { data, error } = await query
@@ -142,7 +157,7 @@ export function Orders() {
       setLoading(false)
     }
     fetchOrders()
-  }, [selectedEventId])
+  }, [profile?.role, selectedEventId, user?.id])
 
   const filteredOrders = orders.filter((order) => {
     if (!searchQuery) return true

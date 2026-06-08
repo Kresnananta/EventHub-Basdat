@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase-client"
 import { useEventContext } from "@/context/EventContext"
 import { Loader2 } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { useAuth } from "@/context/AuthContext"
+import { getScopedEventIds } from "@/lib/dashboard-scope"
 
 type SalesPoint = {
   date: string
@@ -58,6 +60,7 @@ function formatCompactRupiah(value: number) {
 
 export function SalesChart() {
   const { selectedEventId } = useEventContext()
+  const { profile, user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [chartData, setChartData] = useState<SalesPoint[]>([])
 
@@ -65,13 +68,25 @@ export function SalesChart() {
     async function fetchSalesVolume() {
       setLoading(true)
 
+      const scopedEventIds = await getScopedEventIds({
+        role: profile?.role,
+        selectedEventId,
+        userId: user?.id,
+      })
+
+      if (scopedEventIds?.length === 0) {
+        setChartData([])
+        setLoading(false)
+        return
+      }
+
       let query = supabase
         .from("orders")
         .select("total_amount, status, created_at, event_id")
         .order("created_at", { ascending: true })
 
-      if (selectedEventId) {
-        query = query.eq("event_id", selectedEventId)
+      if (scopedEventIds) {
+        query = query.in("event_id", scopedEventIds)
       }
 
       const { data, error } = await query
@@ -114,7 +129,7 @@ export function SalesChart() {
     }
 
     fetchSalesVolume()
-  }, [selectedEventId])
+  }, [profile?.role, selectedEventId, user?.id])
 
   const hasSalesData = chartData.some((item) => item.sales > 0)
 
