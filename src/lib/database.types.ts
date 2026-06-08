@@ -288,6 +288,7 @@ export type Database = {
           name: string
           price: number
           quantity: number
+          section_id: string | null
           sold: number
           updated_at: string
         }
@@ -300,6 +301,7 @@ export type Database = {
           name: string
           price?: number
           quantity?: number
+          section_id?: string | null
           sold?: number
           updated_at?: string
         }
@@ -312,6 +314,7 @@ export type Database = {
           name?: string
           price?: number
           quantity?: number
+          section_id?: string | null
           sold?: number
           updated_at?: string
         }
@@ -323,6 +326,13 @@ export type Database = {
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ticket_tiers_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tickets: {
@@ -332,6 +342,7 @@ export type Database = {
           created_at: string
           id: string
           order_id: string
+          seat_id: string | null
           status: string
           ticket_code: string
           tier_id: string
@@ -343,6 +354,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_id: string
+          seat_id?: string | null
           status?: string
           ticket_code?: string
           tier_id: string
@@ -354,6 +366,7 @@ export type Database = {
           created_at?: string
           id?: string
           order_id?: string
+          seat_id?: string | null
           status?: string
           ticket_code?: string
           tier_id?: string
@@ -372,6 +385,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seats"
             referencedColumns: ["id"]
           },
           {
@@ -420,10 +440,17 @@ export type Database = {
           p_buyer_id: string
           p_event_id: string
           p_quantity: number
+          p_seat_ids?: string[] | null
           p_tier_id: string
           p_total_amount: number
         }
         Returns: Json
+      }
+      create_ticket_tier_seating: {
+        Args: {
+          p_tier_id: string
+        }
+        Returns: undefined
       }
       confirm_demo_payment: {
         Args: {
@@ -431,6 +458,16 @@ export type Database = {
           p_payment_method: string
         }
         Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      get_ticket_tier_seats: {
+        Args: {
+          p_tier_id: string
+        }
+        Returns: Array<{
+          seat_id: string
+          seat_number: string
+          status: string
+        }>
       }
       admin_update_profile_role: {
         Args: {

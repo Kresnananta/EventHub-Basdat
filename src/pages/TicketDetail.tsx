@@ -30,6 +30,7 @@ interface TicketDetailData {
   order_status: string
   order_total: number
   order_created_at: string
+  seat_number: string | null
   event_title: string
   event_description: string
   event_date: string
@@ -72,6 +73,9 @@ export function TicketDetail() {
           created_at,
           order_id,
           tier_id,
+          seats (
+            seat_number
+          ),
           ticket_tiers (
             name,
             price
@@ -111,6 +115,7 @@ export function TicketDetail() {
         order_status: data.orders?.status || 'unknown',
         order_total: data.orders?.total_amount || 0,
         order_created_at: data.orders?.created_at || data.created_at,
+        seat_number: data.seats?.seat_number || null,
         event_title: data.orders?.events?.title || 'Unknown Event',
         event_description: data.orders?.events?.description || '',
         event_date: data.orders?.events?.starts_at || '',
@@ -153,11 +158,20 @@ export function TicketDetail() {
       )
     }
 
-    if (ticket.status === 'active') {
+    if (ticket.order_status === 'pending') {
+      return (
+        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+          <Clock size={14} className="mr-1" />
+          Pending
+        </Badge>
+      )
+    }
+
+    if (ticket.order_status === 'paid' && ticket.status === 'active') {
       return (
         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
           <Ticket size={14} className="mr-1" />
-          Active
+          Paid
         </Badge>
       )
     }
@@ -281,6 +295,7 @@ export function TicketDetail() {
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <DetailItem label="Ticket Type" value={ticket.tier_name} />
+                <DetailItem label="Seat Number" value={ticket.seat_number || "-"} />
                 <DetailItem label="Ticket Price" value={`Rp ${ticket.tier_price.toLocaleString('id-ID')}`} />
                 <DetailItem label="Ticket ID" value={ticket.id} mono />
                 <DetailItem label="Order ID" value={ticket.order_id} mono />
@@ -292,36 +307,55 @@ export function TicketDetail() {
 
           <aside className="space-y-4">
             <Card className="lg:sticky lg:top-24">
-              <CardHeader className="text-center">
-                <CardTitle>Entry Pass</CardTitle>
-                <CardDescription>Show this code at the venue entrance</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="aspect-square rounded-lg border border-border bg-white p-5 shadow-sm">
-                  <img
-                    src={getQrImageUrl(ticket.ticket_code)}
-                    alt={`QR code for ticket ${ticket.ticket_code}`}
-                    className="h-full w-full object-contain"
-                    loading="eager"
-                  />
-                </div>
+              {ticket.order_status === 'pending' ? (
+                <>
+                  <CardHeader className="text-center">
+                    <CardTitle>Payment Pending</CardTitle>
+                    <CardDescription>Complete payment before this ticket can be used.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800">
+                      QR code will be available after payment is confirmed.
+                    </div>
+                    <Button onClick={() => navigate(`/payment/${ticket.order_id}`)} className="w-full">
+                      Continue Payment
+                    </Button>
+                  </CardContent>
+                </>
+              ) : (
+                <>
+                  <CardHeader className="text-center">
+                    <CardTitle>Entry Pass</CardTitle>
+                    <CardDescription>Show this code at the venue entrance</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <div className="aspect-square rounded-lg border border-border bg-white p-5 shadow-sm">
+                      <img
+                        src={getQrImageUrl(ticket.ticket_code)}
+                        alt={`QR code for ticket ${ticket.ticket_code}`}
+                        className="h-full w-full object-contain"
+                        loading="eager"
+                      />
+                    </div>
 
-                <div className="rounded-lg border border-border bg-muted/40 p-4 text-center">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Ticket Code</p>
-                  <p className="font-mono text-lg font-bold text-foreground break-all">{ticket.ticket_code}</p>
-                </div>
+                    <div className="rounded-lg border border-border bg-muted/40 p-4 text-center">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Ticket Code</p>
+                      <p className="font-mono text-lg font-bold text-foreground break-all">{ticket.ticket_code}</p>
+                    </div>
 
-                {ticket.checked_in_at && (
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-                    Checked in at {formatDateTime(ticket.checked_in_at)}
-                  </div>
-                )}
+                    {ticket.checked_in_at && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                        Checked in at {formatDateTime(ticket.checked_in_at)}
+                      </div>
+                    )}
 
-                <Button onClick={handleDownload} className="w-full gap-2">
-                  <Download size={16} />
-                  Download Ticket
-                </Button>
-              </CardContent>
+                    <Button onClick={handleDownload} className="w-full gap-2">
+                      <Download size={16} />
+                      Download Ticket
+                    </Button>
+                  </CardContent>
+                </>
+              )}
             </Card>
           </aside>
         </div>

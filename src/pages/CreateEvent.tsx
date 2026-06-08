@@ -306,7 +306,7 @@ export function CreateEvent() {
         }
       }
 
-      const { error: ticketError } = await supabase.from("ticket_tiers").insert(
+      const { data: createdTiers, error: ticketError } = await supabase.from("ticket_tiers").insert(
         validTicketTiers.map((tier) => ({
           event_id: createdEvent.id,
           name: tier.name,
@@ -315,9 +315,19 @@ export function CreateEvent() {
           quantity: tier.quantity,
           currency: "IDR",
         }))
-      )
+      ).select("id")
 
       if (ticketError) throw new Error(getErrorMessage(ticketError, "Ticket tiers failed to be saved."))
+
+      for (const tier of createdTiers ?? []) {
+        const { error: seatingError } = await supabase.rpc("create_ticket_tier_seating", {
+          p_tier_id: tier.id,
+        })
+
+        if (seatingError) {
+          throw new Error(getErrorMessage(seatingError, "Ticket seating failed to be generated."))
+        }
+      }
 
       navigate(status === "published" ? `/event/${createdEvent.id}` : "/dashboard")
     } catch (error) {

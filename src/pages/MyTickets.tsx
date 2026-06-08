@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { Loader2, Ticket, Download, QrCode, Clock, CheckCircle2, AlertCircle, ArrowRight, X } from "lucide-react"
+import { Armchair, Loader2, Ticket, Download, QrCode, Clock, CheckCircle2, AlertCircle, ArrowRight, X } from "lucide-react"
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase-client'
 import { useNavigate } from 'react-router-dom'
@@ -14,6 +14,7 @@ interface TicketData {
   order_id: string
   order_status: string
   order_expires_at: string | null
+  seat_number: string | null
   ticket_code: string
   status: string
   checked_in_at: string | null
@@ -60,6 +61,9 @@ export function MyTickets() {
           created_at,
           order_id,
           tier_id,
+          seats (
+            seat_number
+          ),
           ticket_tiers (
             name,
             price,
@@ -94,6 +98,7 @@ export function MyTickets() {
         order_id: ticket.orders?.id || ticket.order_id,
         order_status: ticket.orders?.status || 'pending',
         order_expires_at: ticket.orders?.expires_at || null,
+        seat_number: ticket.seats?.seat_number || null,
         ticket_code: ticket.ticket_code,
         status: ticket.status,
         checked_in_at: ticket.checked_in_at,
@@ -271,6 +276,12 @@ export function MyTickets() {
                         Rp {ticket.tier_price.toLocaleString('id-ID')}
                       </span>
                     </div>
+                    {ticket.seat_number && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Armchair size={16} />
+                        Seat {ticket.seat_number}
+                      </div>
+                    )}
                   </div>
 
                   {/* Ticket Code */}
