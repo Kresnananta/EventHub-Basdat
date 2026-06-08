@@ -469,6 +469,16 @@ export type Database = {
           status: string
         }>
       }
+      get_my_ticket_seats: {
+        Args: {
+          p_ticket_ids: string[]
+        }
+        Returns: Array<{
+          ticket_id: string
+          seat_id: string
+          seat_number: string
+        }>
+      }
       admin_update_profile_role: {
         Args: {
           p_profile_id: string

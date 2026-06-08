@@ -61,9 +61,7 @@ export function MyTickets() {
           created_at,
           order_id,
           tier_id,
-          seats (
-            seat_number
-          ),
+          seat_id,
           ticket_tiers (
             name,
             price,
@@ -93,12 +91,29 @@ export function MyTickets() {
 
       if (error) throw error
 
+      const ticketIds = (data || []).map((ticket: any) => ticket.id).filter(Boolean)
+      const seatsByTicketId = new Map<string, string>()
+
+      if (ticketIds.length > 0) {
+        const { data: seatRows, error: seatsError } = await supabase.rpc('get_my_ticket_seats', {
+          p_ticket_ids: ticketIds,
+        })
+
+        if (seatsError) {
+          console.error('Error fetching ticket seats:', seatsError)
+        } else {
+          ;(seatRows ?? []).forEach((seat) => {
+            seatsByTicketId.set(seat.ticket_id, seat.seat_number)
+          })
+        }
+      }
+
       const formatted = (data || []).map((ticket: any) => ({
         id: ticket.id,
         order_id: ticket.orders?.id || ticket.order_id,
         order_status: ticket.orders?.status || 'pending',
         order_expires_at: ticket.orders?.expires_at || null,
-        seat_number: ticket.seats?.seat_number || null,
+        seat_number: seatsByTicketId.get(ticket.id) || null,
         ticket_code: ticket.ticket_code,
         status: ticket.status,
         checked_in_at: ticket.checked_in_at,

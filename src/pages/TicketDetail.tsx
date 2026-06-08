@@ -73,9 +73,7 @@ export function TicketDetail() {
           created_at,
           order_id,
           tier_id,
-          seats (
-            seat_number
-          ),
+          seat_id,
           ticket_tiers (
             name,
             price
@@ -105,6 +103,16 @@ export function TicketDetail() {
 
       if (error) throw error
 
+      const { data: seatRows, error: seatError } = await supabase.rpc('get_my_ticket_seats', {
+        p_ticket_ids: [data.id],
+      })
+
+      if (seatError) {
+        console.error('Error fetching ticket seat:', seatError)
+      }
+
+      const seatNumber = seatRows?.[0]?.seat_number || null
+
       setTicket({
         id: data.id,
         ticket_code: data.ticket_code,
@@ -115,7 +123,7 @@ export function TicketDetail() {
         order_status: data.orders?.status || 'unknown',
         order_total: data.orders?.total_amount || 0,
         order_created_at: data.orders?.created_at || data.created_at,
-        seat_number: data.seats?.seat_number || null,
+        seat_number: seatNumber,
         event_title: data.orders?.events?.title || 'Unknown Event',
         event_description: data.orders?.events?.description || '',
         event_date: data.orders?.events?.starts_at || '',
