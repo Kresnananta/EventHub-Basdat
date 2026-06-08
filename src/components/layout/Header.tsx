@@ -29,7 +29,12 @@ export function Header() {
     session?.user.email?.split("@")[0] ||
     "User"
   const userEmail = session?.user.email || ""
-  const roleLabel = profile?.role === "organizer" ? "Event Organizer" : "Buyer"
+  const roleLabel =
+    profile?.role === "admin"
+      ? "EventHub Admin"
+      : profile?.role === "organizer"
+        ? "Event Organizer"
+        : "Buyer"
   const initials = displayName
     .split(" ")
     .map((name: string) => name[0])

@@ -85,7 +85,10 @@ export function TicketDetail() {
               title,
               description,
               starts_at,
-              location,
+              venue:venues!events_venue_id_fkey (
+                name,
+                city
+              ),
               profiles (
                 full_name
               )
@@ -111,7 +114,9 @@ export function TicketDetail() {
         event_title: data.orders?.events?.title || 'Unknown Event',
         event_description: data.orders?.events?.description || '',
         event_date: data.orders?.events?.starts_at || '',
-        location: data.orders?.events?.location || 'TBA',
+        location: data.orders?.events?.venue
+          ? [data.orders.events.venue.name, data.orders.events.venue.city].filter(Boolean).join(', ')
+          : 'TBA',
         organizer_name: data.orders?.events?.profiles?.full_name || 'Unknown',
         tier_name: data.ticket_tiers?.name || 'Standard',
         tier_price: data.ticket_tiers?.price || 0,

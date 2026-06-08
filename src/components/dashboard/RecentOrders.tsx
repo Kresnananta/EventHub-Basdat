@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase-client"
 import { useEventContext } from "@/context/EventContext"
 import { Loader2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { getScopedEventIds } from "@/lib/dashboard-scope"
 
 type RecentOrderRow = {
   id: string
@@ -74,12 +76,25 @@ function getStatusBadgeClass(status: string) {
 
 export function RecentOrders() {
   const { selectedEventId } = useEventContext()
+  const { profile, user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<RecentOrder[]>([])
 
   useEffect(() => {
     async function fetchRecentOrders() {
       setLoading(true)
+
+      const scopedEventIds = await getScopedEventIds({
+        role: profile?.role,
+        selectedEventId,
+        userId: user?.id,
+      })
+
+      if (scopedEventIds?.length === 0) {
+        setOrders([])
+        setLoading(false)
+        return
+      }
 
       let query = supabase
         .from("orders")
@@ -90,8 +105,8 @@ export function RecentOrders() {
         .order("created_at", { ascending: false })
         .limit(6)
 
-      if (selectedEventId) {
-        query = query.eq("event_id", selectedEventId)
+      if (scopedEventIds) {
+        query = query.in("event_id", scopedEventIds)
       }
 
       const { data, error } = await query
@@ -134,7 +149,7 @@ export function RecentOrders() {
     }
 
     fetchRecentOrders()
-  }, [selectedEventId])
+  }, [profile?.role, selectedEventId, user?.id])
 
   return (
     <Card className="col-span-1 shadow-sm border-border/50">

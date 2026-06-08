@@ -21,11 +21,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
+import { Building2, CalendarDays, LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 
-const menuItems = [
+const organizerMenuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Events", url: "/dashboard/events", icon: CalendarDays },
   { title: "Tickets", url: "/dashboard/tickets", icon: Ticket },
   { title: "Orders", url: "/dashboard/orders", icon: ShoppingCart },
   { title: "Attendees", url: "/dashboard/attendees", icon: Users },
@@ -37,6 +39,13 @@ const eventTools = [
   { title: "Widgets", url: "#", icon: Settings },
 ]
 
+const adminMenuItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Events", url: "/dashboard/events", icon: CalendarDays },
+  { title: "Orders", url: "/dashboard/orders", icon: ShoppingCart },
+  { title: "Venues", url: "/dashboard/venues", icon: Building2 },
+]
+
 type EventOption = {
   id: string
   title: string
@@ -44,16 +53,25 @@ type EventOption = {
 
 export function AppSidebar() {
   const location = useLocation();
+  const { profile, user } = useAuth()
 
   const { selectedEventName, setEventContext } = useEventContext();
   const [eventsData, setEventsData] = useState<EventOption[]>([]);
+  const isAdmin = profile?.role === "admin"
+  const menuItems = isAdmin ? adminMenuItems : organizerMenuItems
 
   useEffect(() => {
     async function fetchEvents() {
-      const { data, error } = await supabase
+      let query = supabase
         .from("events")
         .select("id, title")
         .order("created_at", { ascending: false });
+
+      if (profile?.role !== "admin" && user?.id) {
+        query = query.eq("organizer_id", user.id)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error("Failed to load sidebar events:", error);
@@ -65,7 +83,7 @@ export function AppSidebar() {
       }
     }
     fetchEvents();
-  }, []);
+  }, [profile?.role, user?.id]);
 
   return (
     <Sidebar variant="sidebar" className="border-r-0 bg-primary! text-primary-foreground dark">
@@ -142,34 +160,36 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Event Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {eventTools.map((item) => {
-                const isActive = location.pathname === item.url;
+        {!isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Event Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {eventTools.map((item) => {
+                  const isActive = location.pathname === item.url;
 
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className={`h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200 ${isActive
-                        ? "bg-white/20 text-white font-bold"
-                        : "text-white/80 hover:bg-white/10 hover:text-white"
-                        }`}
-                    >
-                      <Link to={item.url} className="flex items-center gap-3">
-                        <item.icon size={20} />
-                        <span className="font-medium text-[15px]">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className={`h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200 ${isActive
+                          ? "bg-white/20 text-white font-bold"
+                          : "text-white/80 hover:bg-white/10 hover:text-white"
+                          }`}
+                      >
+                        <Link to={item.url} className="flex items-center gap-3">
+                          <item.icon size={20} />
+                          <span className="font-medium text-[15px]">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   )

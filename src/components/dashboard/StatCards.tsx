@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase-client"
 import { useEventContext } from "@/context/EventContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Ticket, ShoppingBag, Eye, Loader2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { getScopedEventIds } from "@/lib/dashboard-scope"
 
 type TicketRow = {
   order_id: string
@@ -27,6 +29,7 @@ function formatRupiah(amount: number) {
 
 export function StatCards() {
   const { selectedEventId } = useEventContext()
+  const { profile, user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     sales: 0,
@@ -38,10 +41,22 @@ export function StatCards() {
     async function fetchStats() {
       setLoading(true)
 
+      const scopedEventIds = await getScopedEventIds({
+        role: profile?.role,
+        selectedEventId,
+        userId: user?.id,
+      })
+
+      if (scopedEventIds?.length === 0) {
+        setStats({ sales: 0, orders: 0, ticketsSold: 0 })
+        setLoading(false)
+        return
+      }
+
       let ordersQuery = supabase.from('orders').select('id, total_amount, status, event_id')
 
-      if (selectedEventId) {
-        ordersQuery = ordersQuery.eq('event_id', selectedEventId)
+      if (scopedEventIds) {
+        ordersQuery = ordersQuery.in('event_id', scopedEventIds)
       }
 
       const ordersRes = await ordersQuery
@@ -79,7 +94,7 @@ export function StatCards() {
       setLoading(false)
     }
     fetchStats()
-  }, [selectedEventId])
+  }, [profile?.role, selectedEventId, user?.id])
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 

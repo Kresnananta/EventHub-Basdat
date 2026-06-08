@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, CalendarClock, Image, Loader2, MapPin, Plus, Save, Send, Ticket, Trash2 } from "lucide-react"
+import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Image, Loader2, MapPin, Plus, Save, Search, Send, Ticket, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,14 @@ type TicketTierForm = {
   description: string
   price: string
   quantity: string
+}
+
+type VenueOption = {
+  id: string
+  name: string
+  address: string | null
+  city: string | null
+  capacity: number | null
 }
 
 const emptyTicketTier = (): TicketTierForm => ({
@@ -44,10 +52,15 @@ export function CreateEvent() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [categoryName, setCategoryName] = useState("")
-  const [location, setLocation] = useState("")
   const [bannerUrl, setBannerUrl] = useState("")
   const [startsAt, setStartsAt] = useState("")
   const [endsAt, setEndsAt] = useState("")
+  const [venues, setVenues] = useState<VenueOption[]>([])
+  const [selectedVenueId, setSelectedVenueId] = useState("")
+  const [venueSearch, setVenueSearch] = useState("")
+  const [venueDropdownOpen, setVenueDropdownOpen] = useState(false)
+  const [venuesLoading, setVenuesLoading] = useState(true)
+  const [venueLoadError, setVenueLoadError] = useState("")
   const [ticketTiers, setTicketTiers] = useState<TicketTierForm[]>([
     { name: "Regular", description: "", price: "", quantity: "" },
   ])
@@ -58,7 +71,59 @@ export function CreateEvent() {
     return ticketTiers.reduce((total, tier) => total + (Number(tier.quantity) || 0), 0)
   }, [ticketTiers])
 
-  const canSubmit = Boolean(title.trim() && startsAt && ticketTiers.some((tier) => tier.name.trim()))
+  const selectedVenue = useMemo(
+    () => venues.find((venue) => venue.id === selectedVenueId) ?? null,
+    [venues, selectedVenueId]
+  )
+
+  const filteredVenues = useMemo(() => {
+    const query = venueSearch.trim().toLowerCase()
+    if (!query) return venues
+
+    return venues.filter((venue) =>
+      [venue.name, venue.city, venue.address]
+        .filter(Boolean)
+        .some((value) => value?.toLowerCase().includes(query))
+    )
+  }, [venues, venueSearch])
+
+  const exceedsVenueCapacity =
+    selectedVenue?.capacity !== null &&
+    selectedVenue?.capacity !== undefined &&
+    totalCapacity > selectedVenue.capacity
+
+  const canSubmit = Boolean(
+    title.trim() &&
+    startsAt &&
+    selectedVenueId &&
+    ticketTiers.some((tier) => tier.name.trim()) &&
+    !exceedsVenueCapacity
+  )
+
+  useEffect(() => {
+    async function fetchVenues() {
+      setVenuesLoading(true)
+      setVenueLoadError("")
+      const { data, error } = await supabase
+        .from("venues")
+        .select("id, name, address, city, capacity")
+        .order("name")
+
+      if (error) {
+        console.error("Failed to load venues:", error)
+        setVenueLoadError(
+          "Venue data could not be loaded. Check the SELECT policy for public.venues in Supabase."
+        )
+        setVenues([])
+      } else {
+        setVenues(data ?? [])
+      }
+
+      setVenuesLoading(false)
+    }
+
+    void fetchVenues()
+  }, [])
 
   function updateTicketTier(index: number, field: keyof TicketTierForm, value: string) {
     setTicketTiers((current) =>
@@ -124,6 +189,11 @@ export function CreateEvent() {
       return
     }
 
+    if (!selectedVenue) {
+      setErrorMessage("Choose a venue managed by EventHub before saving the event.")
+      return
+    }
+
     if (endsAt && new Date(endsAt) <= new Date(startsAt)) {
       setErrorMessage("Event end date must be later than the start date.")
       return
@@ -148,6 +218,14 @@ export function CreateEvent() {
       return
     }
 
+    const requestedCapacity = validTicketTiers.reduce((total, tier) => total + tier.quantity, 0)
+    if (selectedVenue.capacity !== null && requestedCapacity > selectedVenue.capacity) {
+      setErrorMessage(
+        `Total ticket capacity (${requestedCapacity.toLocaleString("id-ID")}) exceeds ${selectedVenue.name}'s capacity (${selectedVenue.capacity.toLocaleString("id-ID")}).`
+      )
+      return
+    }
+
     setSubmittingStatus(status)
 
     try {
@@ -159,9 +237,9 @@ export function CreateEvent() {
         .insert({
           organizer_id: user.id,
           category_id: categoryId,
+          venue_id: selectedVenue.id,
           title: title.trim(),
           description: description.trim() || null,
-          location: location.trim() || null,
           banner_url: bannerUrl.trim() || null,
           starts_at: toTimestamp(startsAt),
           ends_at: endsAt ? toTimestamp(endsAt) : null,
@@ -278,7 +356,7 @@ export function CreateEvent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={cn("overflow-visible", venueDropdownOpen && "relative z-20")}>
             <CardHeader>
               <CardTitle>Schedule & Location</CardTitle>
               <CardDescription>Date and location information used by users before purchasing tickets.</CardDescription>
@@ -315,17 +393,117 @@ export function CreateEvent() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="venueSearch">Venue</Label>
                 <div className="relative">
-                  <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="location"
-                    value={location}
-                    onChange={(event) => setLocation(event.target.value)}
-                    placeholder="contoh: JCC Senayan, Jakarta"
-                    className="h-10 pl-9"
-                  />
+                  <button
+                    type="button"
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 text-left text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    onClick={() => setVenueDropdownOpen((open) => !open)}
+                    aria-expanded={venueDropdownOpen}
+                    aria-haspopup="listbox"
+                  >
+                    <span className={selectedVenue ? "truncate text-foreground" : "truncate text-muted-foreground"}>
+                      {selectedVenue
+                        ? `${selectedVenue.name}${selectedVenue.city ? `, ${selectedVenue.city}` : ""}`
+                        : venuesLoading
+                          ? "Loading venues..."
+                          : "Choose a venue"}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+
+                  {venueDropdownOpen && (
+                    <div className="absolute z-30 mt-2 w-full rounded-lg border border-border bg-background p-2 shadow-lg">
+                      <div className="relative mb-2">
+                        <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="venueSearch"
+                          value={venueSearch}
+                          onChange={(event) => setVenueSearch(event.target.value)}
+                          placeholder="Search venue, city, or address..."
+                          className="pl-8"
+                          autoFocus
+                        />
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto" role="listbox">
+                        {filteredVenues.length > 0 ? (
+                          filteredVenues.map((venue) => (
+                            <button
+                              key={venue.id}
+                              type="button"
+                              role="option"
+                              aria-selected={venue.id === selectedVenueId}
+                              className="flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
+                              onClick={() => {
+                                setSelectedVenueId(venue.id)
+                                setVenueSearch("")
+                                setVenueDropdownOpen(false)
+                              }}
+                            >
+                              <span>
+                                <span className="block font-medium text-foreground">{venue.name}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {[venue.city, venue.address].filter(Boolean).join(" - ") || "Address not provided"}
+                                </span>
+                              </span>
+                              {venue.id === selectedVenueId && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                            {venuesLoading
+                              ? "Loading venues..."
+                              : venueLoadError
+                                ? "Unable to load venues."
+                                : venues.length === 0
+                                  ? "No venues are available."
+                                  : "No matching venue found."}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {selectedVenue ? (
+                  <div className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm sm:grid-cols-2">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">{selectedVenue.name}</p>
+                        <p className="text-muted-foreground">
+                          {[selectedVenue.address, selectedVenue.city].filter(Boolean).join(", ") || "Address not provided"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="font-medium text-foreground">Venue capacity</p>
+                        <p className={exceedsVenueCapacity ? "text-destructive" : "text-muted-foreground"}>
+                          {selectedVenue.capacity === null
+                            ? "Not specified"
+                            : `${selectedVenue.capacity.toLocaleString("id-ID")} people`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {venueLoadError || (
+                      venues.length === 0 && !venuesLoading
+                        ? "No venue records are currently available to this account."
+                        : "Venues are created and maintained by EventHub administrators."
+                    )}
+                  </p>
+                )}
+
+                {exceedsVenueCapacity && selectedVenue?.capacity !== null && (
+                  <p className="text-sm text-destructive">
+                    Total ticket capacity exceeds this venue by {(totalCapacity - selectedVenue.capacity).toLocaleString("id-ID")} seats.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -463,7 +641,7 @@ export function CreateEvent() {
               </div>
 
               <p className={cn("text-xs text-muted-foreground", !canSubmit && "text-destructive")}>
-                Event title, start date, and at least one ticket name are required.
+                Event title, start date, venue, and at least one ticket name are required. Ticket capacity cannot exceed venue capacity.
               </p>
             </CardContent>
           </Card>

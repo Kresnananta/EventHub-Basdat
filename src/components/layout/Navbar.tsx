@@ -102,7 +102,7 @@ export function Navbar() {
                     <UserCircle size={16} />
                     Profile
                   </DropdownMenuItem>
-                  {profile?.role === 'organizer' && (
+                  {(profile?.role === 'organizer' || profile?.role === 'admin') && (
                     <DropdownMenuItem className="cursor-pointer" onSelect={() => navigate('/dashboard')}>
                       <LayoutDashboard size={16} />
                       Dashboard
