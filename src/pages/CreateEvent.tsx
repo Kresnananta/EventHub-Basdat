@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Image, Loader2, MapPin, Plus, Save, Search, Send, Ticket, Trash2, Upload, X } from "lucide-react"
+import { ArrowLeft, Building2, CalendarClock, Check, ChevronsUpDown, Loader2, MapPin, Plus, Save, Search, Send, Ticket, Trash2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -54,7 +54,6 @@ export function CreateEvent() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [categoryName, setCategoryName] = useState("")
-  const [bannerUrl, setBannerUrl] = useState("")
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState("")
   const [startsAt, setStartsAt] = useState("")
@@ -140,8 +139,6 @@ export function CreateEvent() {
 
     return () => URL.revokeObjectURL(objectUrl)
   }, [bannerFile])
-
-  const bannerPreview = bannerPreviewUrl || bannerUrl.trim()
 
   function handleBannerFileChange(file: File | null) {
     setErrorMessage("")
@@ -275,7 +272,7 @@ export function CreateEvent() {
           venue_id: selectedVenue.id,
           title: title.trim(),
           description: description.trim() || null,
-          banner_url: bannerFile ? null : bannerUrl.trim() || null,
+          banner_url: null, // update habis file diupload
           starts_at: toTimestamp(startsAt),
           ends_at: endsAt ? toTimestamp(endsAt) : null,
           status,
@@ -392,30 +389,15 @@ export function CreateEvent() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    value={categoryName}
-                    onChange={(event) => setCategoryName(event.target.value)}
-                    placeholder="Technology, Music, Business"
-                    className="h-10"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="bannerUrl">Banner image URL</Label>
-                  <div className="relative">
-                    <Image className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="bannerUrl"
-                      value={bannerUrl}
-                      onChange={(event) => setBannerUrl(event.target.value)}
-                      placeholder="https://..."
-                      className="h-10 pl-9"
-                    />
-                  </div>
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <Input
+                  id="category"
+                  value={categoryName}
+                  onChange={(event) => setCategoryName(event.target.value)}
+                  placeholder="Technology, Music, Business"
+                  className="h-10"
+                />
               </div>
 
               <div className="grid gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
@@ -445,9 +427,9 @@ export function CreateEvent() {
                   className="sr-only"
                   onChange={(event) => handleBannerFileChange(event.target.files?.[0] ?? null)}
                 />
-                {bannerPreview ? (
+                {bannerPreviewUrl ? (
                   <img
-                    src={bannerPreview}
+                    src={bannerPreviewUrl}
                     alt="Event banner preview"
                     className="aspect-video w-full rounded-lg border border-border object-cover"
                   />
