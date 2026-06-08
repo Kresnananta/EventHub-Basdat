@@ -19,6 +19,7 @@ import { CheckIn } from './pages/CheckIn'
 import { CreateEvent } from './pages/CreateEvent'
 import { EditEvent } from './pages/EditEvent'
 import { Venues } from './pages/Venues'
+import { NotFound } from './pages/NotFound'
 
 function App() {
   return (
