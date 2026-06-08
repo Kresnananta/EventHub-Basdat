@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { ArrowLeft, Calendar, MapPin, Users, Tag, Loader2 } from "lucide-react"
+import { ArrowLeft, Building2, Calendar, MapPin, Users, Tag, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 
 interface EventDetails {
@@ -19,6 +19,15 @@ interface EventDetails {
   attendees: number
   ticketsSold: number
   ticketTypes: TicketType[]
+  venue: VenueDetails | null
+}
+
+interface VenueDetails {
+  id: string
+  name: string
+  address: string | null
+  city: string | null
+  capacity: number | null
 }
 
 interface TicketType {
@@ -109,6 +118,7 @@ export function EventDetail() {
         .from('events')
         .select(`
           id, title, description, starts_at, location, banner_url,
+          venues ( id, name, address, city, capacity ),
           ticket_tiers ( id, name, price, quantity, sold )
         `)
         .eq('id', eventId)
@@ -120,6 +130,7 @@ export function EventDetail() {
       }
 
       if (data) {
+        const venue = data.venues as VenueDetails | null
         let totalCapacity = 0;
         let totalSold = 0;
         const mappedTicketTypes: TicketType[] = [];
@@ -151,11 +162,14 @@ export function EventDetail() {
           description: data.description || '',
           fullDescription: data.description || 'No description available for this event.',
           date: new Date(data.starts_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-          location: data.location || 'TBA',
+          location: venue
+            ? [venue.name, venue.city].filter(Boolean).join(', ')
+            : data.location || 'TBA',
           image: data.banner_url || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop",
           attendees: totalCapacity,
           ticketsSold: totalSold,
-          ticketTypes: mappedTicketTypes
+          ticketTypes: mappedTicketTypes,
+          venue,
         })
       }
       setLoading(false)
@@ -272,6 +286,41 @@ export function EventDetail() {
                 <p className="text-muted-foreground leading-relaxed">{event.fullDescription}</p>
               </CardContent>
             </Card>
+
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Venue Information
+                </CardTitle>
+                <CardDescription>
+                  Official venue details managed by EventHub.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {event.venue ? (
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <VenueItem label="Venue name" value={event.venue.name} />
+                    <VenueItem label="City" value={event.venue.city || "-"} />
+                    <VenueItem label="Address" value={event.venue.address || "-"} />
+                    <VenueItem
+                      label="Maximum capacity"
+                      value={event.venue.capacity === null
+                        ? "Not specified"
+                        : `${event.venue.capacity.toLocaleString("id-ID")} people`}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <p className="font-semibold">Legacy location</p>
+                      <p>{event.location}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar - Ticket Selection */}
@@ -316,6 +365,15 @@ export function EventDetail() {
 
       {/* Footer */}
       <Footer />
+    </div>
+  )
+}
+
+function VenueItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 font-medium text-foreground">{value}</p>
     </div>
   )
 }

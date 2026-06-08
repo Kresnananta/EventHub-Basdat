@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
+import { AdminRoute } from './components/layout/AdminRoute'
 import { DashboardLayout } from "./components/layout/DashboardLayout"
 import { Dashboard } from "./pages/Dashboard"
 import { Landing } from "./pages/Landing"
@@ -15,6 +16,7 @@ import { MyTickets } from './pages/MyTickets'
 import { TicketDetail } from './pages/TicketDetail'
 import { CheckIn } from './pages/CheckIn'
 import { CreateEvent } from './pages/CreateEvent'
+import { Venues } from './pages/Venues'
 
 function App() {
   return (
@@ -39,6 +41,9 @@ function App() {
               <Route path='orders' element={<Orders />} />
               <Route path='attendees' element={<Attendees />} />
               <Route path='check-in' element={<CheckIn />} />
+              <Route element={<AdminRoute />}>
+                <Route path='venues' element={<Venues />} />
+              </Route>
             </Route>
           </Route>
 

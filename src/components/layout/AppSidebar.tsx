@@ -21,7 +21,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
+import { Building2, LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
 
 
 const menuItems = [
@@ -37,6 +38,10 @@ const eventTools = [
   { title: "Widgets", url: "#", icon: Settings },
 ]
 
+const adminItems = [
+  { title: "Venues", url: "/dashboard/venues", icon: Building2 },
+]
+
 type EventOption = {
   id: string
   title: string
@@ -44,9 +49,11 @@ type EventOption = {
 
 export function AppSidebar() {
   const location = useLocation();
+  const { profile } = useAuth()
 
   const { selectedEventName, setEventContext } = useEventContext();
   const [eventsData, setEventsData] = useState<EventOption[]>([]);
+  const isAdmin = profile?.role === "admin"
 
   useEffect(() => {
     async function fetchEvents() {
@@ -170,6 +177,37 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {adminItems.map((item) => {
+                  const isActive = location.pathname === item.url;
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className={`h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200 ${isActive
+                          ? "bg-white/20 text-white font-bold"
+                          : "text-white/80 hover:bg-white/10 hover:text-white"
+                          }`}
+                      >
+                        <Link to={item.url} className="flex items-center gap-3">
+                          <item.icon size={20} />
+                          <span className="font-medium text-[15px]">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   )
