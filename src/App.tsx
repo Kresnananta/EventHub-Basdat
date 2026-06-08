@@ -15,6 +15,7 @@ import { MyTickets } from './pages/MyTickets'
 import { TicketDetail } from './pages/TicketDetail'
 import { CheckIn } from './pages/CheckIn'
 import { CreateEvent } from './pages/CreateEvent'
+import { NotFound } from './pages/NotFound'
 
 function App() {
   return (
@@ -42,7 +43,7 @@ function App() {
             </Route>
           </Route>
 
-          <Route path='*' element={<Navigate to='/' replace />} />
+          <Route path='*' element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
