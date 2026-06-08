@@ -25,7 +25,7 @@ import { Building2, CalendarDays, LayoutDashboard, Ticket, ShoppingCart, Users, 
 import { useAuth } from "@/context/AuthContext"
 
 
-const menuItems = [
+const organizerMenuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Events", url: "/dashboard/events", icon: CalendarDays },
   { title: "Tickets", url: "/dashboard/tickets", icon: Ticket },
@@ -39,7 +39,10 @@ const eventTools = [
   { title: "Widgets", url: "#", icon: Settings },
 ]
 
-const adminItems = [
+const adminMenuItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Events", url: "/dashboard/events", icon: CalendarDays },
+  { title: "Orders", url: "/dashboard/orders", icon: ShoppingCart },
   { title: "Venues", url: "/dashboard/venues", icon: Building2 },
 ]
 
@@ -55,6 +58,7 @@ export function AppSidebar() {
   const { selectedEventName, setEventContext } = useEventContext();
   const [eventsData, setEventsData] = useState<EventOption[]>([]);
   const isAdmin = profile?.role === "admin"
+  const menuItems = isAdmin ? adminMenuItems : organizerMenuItems
 
   useEffect(() => {
     async function fetchEvents() {
@@ -156,41 +160,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Event Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {eventTools.map((item) => {
-                const isActive = location.pathname === item.url;
-
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className={`h-11 px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors duration-200 ${isActive
-                        ? "bg-white/20 text-white font-bold"
-                        : "text-white/80 hover:bg-white/10 hover:text-white"
-                        }`}
-                    >
-                      <Link to={item.url} className="flex items-center gap-3">
-                        <item.icon size={20} />
-                        <span className="font-medium text-[15px]">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {isAdmin && (
+        {!isAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Admin</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-white/60 uppercase text-xs tracking-widest font-semibold mb-2 px-3">Event Tools</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {adminItems.map((item) => {
+                {eventTools.map((item) => {
                   const isActive = location.pathname === item.url;
 
                   return (
