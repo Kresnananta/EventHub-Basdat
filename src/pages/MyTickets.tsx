@@ -67,7 +67,10 @@ export function MyTickets() {
             events (
               title,
               starts_at,
-              location,
+              venue:venues!events_venue_id_fkey (
+                name,
+                city
+              ),
               organizer_id,
               profiles (
                 full_name
@@ -90,7 +93,9 @@ export function MyTickets() {
         tier_name: ticket.ticket_tiers?.name || 'Standard',
         tier_price: ticket.ticket_tiers?.price || 0,
         organizer_name: ticket.orders?.events?.profiles?.full_name || 'Unknown',
-        location: ticket.orders?.events?.location || 'TBA',
+        location: ticket.orders?.events?.venue
+          ? [ticket.orders.events.venue.name, ticket.orders.events.venue.city].filter(Boolean).join(', ')
+          : 'TBA',
         created_at: ticket.created_at
       }))
 

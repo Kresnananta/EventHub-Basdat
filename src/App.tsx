@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { AdminRoute } from './components/layout/AdminRoute'
 import { DashboardLayout } from "./components/layout/DashboardLayout"
 import { Dashboard } from "./pages/Dashboard"
+import { Events } from "./pages/Events"
 import { Landing } from "./pages/Landing"
 import { Tickets } from './pages/Tickets'
 import { Orders } from './pages/Orders'
@@ -16,6 +17,7 @@ import { MyTickets } from './pages/MyTickets'
 import { TicketDetail } from './pages/TicketDetail'
 import { CheckIn } from './pages/CheckIn'
 import { CreateEvent } from './pages/CreateEvent'
+import { EditEvent } from './pages/EditEvent'
 import { Venues } from './pages/Venues'
 
 function App() {
@@ -36,6 +38,8 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path='/dashboard' element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path='events' element={<Events />} />
+              <Route path='events/:eventId/edit' element={<EditEvent />} />
               <Route path='create-event' element={<CreateEvent />} />
               <Route path='tickets' element={<Tickets />} />
               <Route path='orders' element={<Orders />} />

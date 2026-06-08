@@ -117,8 +117,8 @@ export function EventDetail() {
       const { data, error } = await supabase
         .from('events')
         .select(`
-          id, title, description, starts_at, location, banner_url,
-          venues ( id, name, address, city, capacity ),
+          id, title, description, starts_at, banner_url,
+          venue:venues!events_venue_id_fkey ( id, name, address, city, capacity ),
           ticket_tiers ( id, name, price, quantity, sold )
         `)
         .eq('id', eventId)
@@ -130,7 +130,7 @@ export function EventDetail() {
       }
 
       if (data) {
-        const venue = data.venues as VenueDetails | null
+        const venue = data.venue as VenueDetails | null
         let totalCapacity = 0;
         let totalSold = 0;
         const mappedTicketTypes: TicketType[] = [];
@@ -164,7 +164,7 @@ export function EventDetail() {
           date: new Date(data.starts_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
           location: venue
             ? [venue.name, venue.city].filter(Boolean).join(', ')
-            : data.location || 'TBA',
+            : 'TBA',
           image: data.banner_url || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop",
           attendees: totalCapacity,
           ticketsSold: totalSold,
@@ -313,10 +313,7 @@ export function EventDetail() {
                 ) : (
                   <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                    <div>
-                      <p className="font-semibold">Legacy location</p>
-                      <p>{event.location}</p>
-                    </div>
+                    Venue data is not assigned to this event yet.
                   </div>
                 )}
               </CardContent>

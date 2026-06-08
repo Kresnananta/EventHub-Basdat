@@ -21,12 +21,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Building2, LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
+import { Building2, CalendarDays, LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Events", url: "/dashboard/events", icon: CalendarDays },
   { title: "Tickets", url: "/dashboard/tickets", icon: Ticket },
   { title: "Orders", url: "/dashboard/orders", icon: ShoppingCart },
   { title: "Attendees", url: "/dashboard/attendees", icon: Users },
@@ -49,7 +50,7 @@ type EventOption = {
 
 export function AppSidebar() {
   const location = useLocation();
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
 
   const { selectedEventName, setEventContext } = useEventContext();
   const [eventsData, setEventsData] = useState<EventOption[]>([]);
@@ -57,10 +58,16 @@ export function AppSidebar() {
 
   useEffect(() => {
     async function fetchEvents() {
-      const { data, error } = await supabase
+      let query = supabase
         .from("events")
         .select("id, title")
         .order("created_at", { ascending: false });
+
+      if (profile?.role !== "admin" && user?.id) {
+        query = query.eq("organizer_id", user.id)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error("Failed to load sidebar events:", error);
@@ -72,7 +79,7 @@ export function AppSidebar() {
       }
     }
     fetchEvents();
-  }, []);
+  }, [profile?.role, user?.id]);
 
   return (
     <Sidebar variant="sidebar" className="border-r-0 bg-primary! text-primary-foreground dark">

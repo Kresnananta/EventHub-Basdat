@@ -64,7 +64,6 @@ type NestedTicketTier = {
     id: string
     title: string
     starts_at: string
-    location: string | null
   } | null
 } | null
 
@@ -108,7 +107,6 @@ type EventLookupRow = {
   id: string
   title: string
   starts_at: string
-  location: string | null
 }
 
 type ProfileLookupRow = {
@@ -260,7 +258,7 @@ async function hydrateTicket(ticket: TicketBaseRow): Promise<TicketLookupRow> {
   ])
   const eventId = tierRes.data?.event_id || orderRes.data?.event_id
   const eventRes = eventId
-    ? await querySingle<EventLookupRow>("events", "id, title, starts_at, location", "id", eventId)
+    ? await querySingle<EventLookupRow>("events", "id, title, starts_at", "id", eventId)
     : { data: null }
 
   return {

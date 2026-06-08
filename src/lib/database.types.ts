@@ -40,14 +40,13 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
-          location: string | null
           organizer_id: string
           slug: string | null
           starts_at: string
           status: string
           title: string
           updated_at: string
-          venue_id: string | null
+          venue_id: string
         }
         Insert: {
           banner_url?: string | null
@@ -56,14 +55,13 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
-          location?: string | null
           organizer_id: string
           slug?: string | null
           starts_at: string
           status?: string
           title: string
           updated_at?: string
-          venue_id?: string | null
+          venue_id: string
         }
         Update: {
           banner_url?: string | null
@@ -72,14 +70,13 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
-          location?: string | null
           organizer_id?: string
           slug?: string | null
           starts_at?: string
           status?: string
           title?: string
           updated_at?: string
-          venue_id?: string | null
+          venue_id?: string
         }
         Relationships: [
           {

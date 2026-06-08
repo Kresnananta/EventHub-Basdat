@@ -82,7 +82,8 @@ export function Landing() {
       const { data } = await supabase
         .from('events')
         .select(`
-          id, title, description, starts_at, location, banner_url,
+          id, title, description, starts_at, banner_url,
+          venue:venues!events_venue_id_fkey ( name, city ),
           categories ( name ),
           ticket_tiers ( quantity, sold )
         `)
@@ -105,7 +106,9 @@ export function Landing() {
             name: e.title || "Untitled Event",
             description: e.description || "",
             date: new Date(e.starts_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
-            location: e.location || "TBA",
+            location: e.venue
+              ? [e.venue.name, e.venue.city].filter(Boolean).join(", ")
+              : "TBA",
             image: e.banner_url || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=2070&auto=format&fit=crop",
             attendees: totalCapacity,
             ticketsSold: totalSold,

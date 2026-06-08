@@ -60,6 +60,7 @@ export function CreateEvent() {
   const [venueSearch, setVenueSearch] = useState("")
   const [venueDropdownOpen, setVenueDropdownOpen] = useState(false)
   const [venuesLoading, setVenuesLoading] = useState(true)
+  const [venueLoadError, setVenueLoadError] = useState("")
   const [ticketTiers, setTicketTiers] = useState<TicketTierForm[]>([
     { name: "Regular", description: "", price: "", quantity: "" },
   ])
@@ -102,6 +103,7 @@ export function CreateEvent() {
   useEffect(() => {
     async function fetchVenues() {
       setVenuesLoading(true)
+      setVenueLoadError("")
       const { data, error } = await supabase
         .from("venues")
         .select("id, name, address, city, capacity")
@@ -109,7 +111,10 @@ export function CreateEvent() {
 
       if (error) {
         console.error("Failed to load venues:", error)
-        setErrorMessage("Venue data could not be loaded.")
+        setVenueLoadError(
+          "Venue data could not be loaded. Check the SELECT policy for public.venues in Supabase."
+        )
+        setVenues([])
       } else {
         setVenues(data ?? [])
       }
@@ -235,7 +240,6 @@ export function CreateEvent() {
           venue_id: selectedVenue.id,
           title: title.trim(),
           description: description.trim() || null,
-          location: [selectedVenue.name, selectedVenue.city].filter(Boolean).join(", "),
           banner_url: bannerUrl.trim() || null,
           starts_at: toTimestamp(startsAt),
           ends_at: endsAt ? toTimestamp(endsAt) : null,
@@ -352,7 +356,7 @@ export function CreateEvent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={cn("overflow-visible", venueDropdownOpen && "relative z-20")}>
             <CardHeader>
               <CardTitle>Schedule & Location</CardTitle>
               <CardDescription>Date and location information used by users before purchasing tickets.</CardDescription>
@@ -448,7 +452,13 @@ export function CreateEvent() {
                           ))
                         ) : (
                           <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                            {venuesLoading ? "Loading venues..." : "No matching venue found."}
+                            {venuesLoading
+                              ? "Loading venues..."
+                              : venueLoadError
+                                ? "Unable to load venues."
+                                : venues.length === 0
+                                  ? "No venues are available."
+                                  : "No matching venue found."}
                           </p>
                         )}
                       </div>
@@ -481,7 +491,11 @@ export function CreateEvent() {
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Venues are created and maintained by EventHub administrators.
+                    {venueLoadError || (
+                      venues.length === 0 && !venuesLoading
+                        ? "No venue records are currently available to this account."
+                        : "Venues are created and maintained by EventHub administrators."
+                    )}
                   </p>
                 )}
 
