@@ -17,6 +17,25 @@ interface BookingData {
   quantity: number
 }
 
+function getBookedOrderId(data: unknown): string | null {
+  if (typeof data === 'string') return data
+
+  if (Array.isArray(data)) {
+    return getBookedOrderId(data[0])
+  }
+
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    const orderId = record.order_id || record.orderId || record.id
+
+    if (typeof orderId === 'string') {
+      return orderId
+    }
+  }
+
+  return null
+}
+
 // const eventData: Record<string, any> = {
 //   "E-001": {
 //     name: "Google I/O 2026",
@@ -204,7 +223,7 @@ useEffect(() => {
 
       try {
         const qty = Number(formData.quantity) || 1
-        const totalAmount = totalPrice * qty
+        const totalAmount = ticket.price * qty
 
         const { data, error } = await supabase.rpc('book_ticket', {
           p_buyer_id: session.user.id,
@@ -219,7 +238,13 @@ useEffect(() => {
           alert('Gagal memproses tiket:\n' + error.message)
         } else {
           console.log('Success Booking:', data)
-          setStep('confirmation')
+          const orderId = getBookedOrderId(data)
+
+          if (orderId) {
+            navigate(`/payment/${orderId}`)
+          } else {
+            setStep('confirmation')
+          }
         }
       } catch (err: any) {
         alert('Connection error:' + err.message)
