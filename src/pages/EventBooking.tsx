@@ -198,8 +198,9 @@ useEffect(() => {
     )
   }
 
-  const totalPrice = ticket.price * formData.quantity
   const hasSeatSelection = seats.length > 0
+  const bookingQuantity = hasSeatSelection ? selectedSeatIds.length : formData.quantity
+  const totalPrice = ticket.price * bookingQuantity
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -238,7 +239,7 @@ useEffect(() => {
         return prev.filter(id => id !== seat.seat_id)
       }
 
-      if (prev.length >= formData.quantity) {
+      if (prev.length >= 10) {
         return prev
       }
 
@@ -262,15 +263,15 @@ useEffect(() => {
     }
 
     if (formData.firstName && formData.lastName && formData.email && formData.phone) {
-      if (hasSeatSelection && selectedSeatIds.length !== formData.quantity) {
-        alert(`Silakan pilih ${formData.quantity} kursi terlebih dahulu.`)
+      if (hasSeatSelection && selectedSeatIds.length === 0) {
+        alert("Silakan pilih minimal 1 kursi terlebih dahulu.")
         return
       }
 
       setIsSubmitting(true)
 
       try {
-        const qty = Number(formData.quantity) || 1
+        const qty = hasSeatSelection ? selectedSeatIds.length : Number(formData.quantity) || 1
         const totalAmount = ticket.price * qty
 
         const { data, error } = await supabase.rpc('book_ticket', {
@@ -501,20 +502,22 @@ useEffect(() => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Number of Tickets *</label>
-                    <Input
-                      name="quantity"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={formData.quantity}
-                      onChange={handleInputChange}
-                      required
-                      className="border-border/50"
-                    />
-                    <p className="text-xs text-muted-foreground">Maximum 10 tickets per booking</p>
-                  </div>
+                  {!hasSeatSelection && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Number of Tickets *</label>
+                      <Input
+                        name="quantity"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={formData.quantity}
+                        onChange={handleInputChange}
+                        required
+                        className="border-border/50"
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum 10 tickets per booking</p>
+                    </div>
+                  )}
 
                   {hasSeatSelection && (
                     <div className="space-y-3">
@@ -524,7 +527,7 @@ useEffect(() => {
                           Select Seats *
                         </label>
                         <span className="text-xs font-medium text-muted-foreground">
-                          {selectedSeatIds.length}/{formData.quantity} selected
+                          {selectedSeatIds.length} selected
                         </span>
                       </div>
 
@@ -568,12 +571,13 @@ useEffect(() => {
                           Reserved/Paid
                         </span>
                       </div>
+                      <p className="text-xs text-muted-foreground">Select up to 10 seats. Ticket quantity follows the selected seats.</p>
                     </div>
                   )}
 
                   <Button
                     type="submit"
-                    disabled={isSubmitting || (hasSeatSelection && selectedSeatIds.length !== formData.quantity)}
+                    disabled={isSubmitting || (hasSeatSelection && selectedSeatIds.length === 0)}
                     className="w-full font-medium shadow-sm mt-6 cursor-pointer"
                   >
                     {isSubmitting ? (
@@ -613,7 +617,7 @@ useEffect(() => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Quantity:</span>
-                      <span className="font-medium text-foreground">{formData.quantity}</span>
+                      <span className="font-medium text-foreground">{bookingQuantity}</span>
                     </div>
                     {hasSeatSelection && (
                       <div className="flex justify-between gap-3 text-sm">
