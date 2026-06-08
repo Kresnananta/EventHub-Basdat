@@ -28,11 +28,17 @@ type TicketTierRow = {
 }
 
 type TicketForm = {
+  eventId: string
   name: string
   description: string
   price: string
   quantity: string
   currency: string
+}
+
+type EventOption = {
+  id: string
+  title: string
 }
 
 function formatCurrency(currency: string, amount: number) {
@@ -41,10 +47,13 @@ function formatCurrency(currency: string, amount: number) {
 
 export function Tickets() {
   const [tickets, setTickets] = useState<TicketTierRow[]>([]);
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([])
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false)
+  const [creatingTicket, setCreatingTicket] = useState(false)
   const [editingTicket, setEditingTicket] = useState<TicketTierRow | null>(null)
   const [formData, setFormData] = useState<TicketForm>({
+    eventId: "",
     name: "",
     description: "",
     price: "",
@@ -67,6 +76,7 @@ export function Tickets() {
 
     if (scopedEventIds?.length === 0) {
       setTickets([])
+      setEventOptions([])
       setLoading(false)
       return
     }
@@ -83,13 +93,32 @@ export function Tickets() {
       query = query.in('event_id', scopedEventIds)
     }
 
-    const { data, error } = await query
+    let eventsQuery = supabase
+      .from("events")
+      .select("id, title")
+      .order("title")
+
+    if (scopedEventIds) {
+      eventsQuery = eventsQuery.in("id", scopedEventIds)
+    }
+
+    const [ticketResult, eventResult] = await Promise.all([query, eventsQuery])
+    const { data, error } = ticketResult
+
     if (error) {
       console.error("Error fetching tickets:", error)
       setTickets([])
       setLoading(false)
       return
     }
+
+    if (eventResult.error) {
+      console.error("Error fetching ticket events:", eventResult.error)
+      setEventOptions([])
+    } else {
+      setEventOptions(eventResult.data ?? [])
+    }
+
     setTickets((data ?? []) as unknown as TicketTierRow[])
     setLoading(false)
   }, [profile?.role, selectedEventId, user?.id])
@@ -98,9 +127,36 @@ export function Tickets() {
     fetchTickets()
   }, [fetchTickets])
 
+  function getDefaultEventId() {
+    if (selectedEventId && eventOptions.some((event) => event.id === selectedEventId)) {
+      return selectedEventId
+    }
+
+    if (eventOptions.length === 1) return eventOptions[0].id
+
+    return ""
+  }
+
+  function openCreateDialog() {
+    setCreatingTicket(true)
+    setEditingTicket(null)
+    setFormData({
+      eventId: getDefaultEventId(),
+      name: "",
+      description: "",
+      price: "",
+      quantity: "",
+      currency: "IDR",
+    })
+    setErrorMessage("")
+    setSuccessMessage("")
+  }
+
   function openEditDialog(ticket: TicketTierRow) {
+    setCreatingTicket(false)
     setEditingTicket(ticket)
     setFormData({
+      eventId: ticket.event_id,
       name: ticket.name,
       description: ticket.description || "",
       price: ticket.price.toString(),
@@ -112,6 +168,7 @@ export function Tickets() {
   }
 
   function closeEditDialog() {
+    setCreatingTicket(false)
     setEditingTicket(null)
     setErrorMessage("")
     setSuccessMessage("")
@@ -124,14 +181,19 @@ export function Tickets() {
   async function handleSaveTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!editingTicket) return
-
+    const eventId = formData.eventId
     const name = formData.name.trim()
     const price = Number(formData.price)
     const quantity = Number(formData.quantity)
+    const currency = formData.currency.trim().toUpperCase() || "IDR"
 
     setErrorMessage("")
     setSuccessMessage("")
+
+    if (!editingTicket && !eventId) {
+      setErrorMessage("Choose an event before creating a ticket tier.")
+      return
+    }
 
     if (!name) {
       setErrorMessage("Ticket name is required.")
@@ -148,7 +210,7 @@ export function Tickets() {
       return
     }
 
-    if (quantity < editingTicket.sold) {
+    if (editingTicket && quantity < editingTicket.sold) {
       setErrorMessage(
         `Ticket capacity cannot be lower than ${editingTicket.sold.toLocaleString("id-ID")} tickets already sold.`
       )
@@ -157,23 +219,34 @@ export function Tickets() {
 
     setSaving(true)
 
-    const { error } = await supabase
-      .from("ticket_tiers")
-      .update({
-        name,
-        description: formData.description.trim() || null,
-        price,
-        quantity,
-        currency: formData.currency.trim().toUpperCase() || "IDR",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", editingTicket.id)
+    const ticketValues = {
+      name,
+      description: formData.description.trim() || null,
+      price,
+      quantity,
+      currency,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = editingTicket
+      ? await supabase
+        .from("ticket_tiers")
+        .update(ticketValues)
+        .eq("id", editingTicket.id)
+      : await supabase
+        .from("ticket_tiers")
+        .insert({
+          ...ticketValues,
+          event_id: eventId,
+          sold: 0,
+        })
 
     if (error) {
-      setErrorMessage(getErrorMessage(error, "Ticket tier could not be updated."))
+      setErrorMessage(getErrorMessage(error, "Ticket tier could not be saved."))
     } else {
-      setSuccessMessage("Ticket tier updated successfully.")
+      setSuccessMessage(editingTicket ? "Ticket tier updated successfully." : "Ticket tier created successfully.")
       await fetchTickets()
+      setCreatingTicket(false)
       setEditingTicket(null)
     }
 
@@ -187,7 +260,7 @@ export function Tickets() {
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Ticket Management</h2>
           <p className="text-muted-foreground mt-1">Manage ticket tiers and sales of your event</p>
         </div>
-        <Button className="gap-2 shadow-sm font-medium">
+        <Button className="gap-2 shadow-sm font-medium" onClick={openCreateDialog} disabled={loading || eventOptions.length === 0}>
           <Plus size={16} />
           Create New Ticket
         </Button>
@@ -256,7 +329,7 @@ export function Tickets() {
                 )) : (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                      Choose the event first or make new Ticket Tier from Table Editor in Supabase.
+                      {eventOptions.length === 0 ? "No managed events are available for ticket tiers." : "No ticket tiers have been created yet."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -266,15 +339,17 @@ export function Tickets() {
         </CardContent>
       </Card>
 
-      {editingTicket && (
+      {(creatingTicket || editingTicket) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-xl rounded-lg border border-border bg-background shadow-xl">
             <form onSubmit={handleSaveTicket}>
               <div className="flex items-start justify-between gap-4 border-b border-border p-5">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Edit Ticket Tier</h3>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {editingTicket ? "Edit Ticket Tier" : "Create Ticket Tier"}
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {editingTicket.events?.title || "Unknown Event"}
+                    {editingTicket?.events?.title || "Add a ticket category to one of your managed events."}
                   </p>
                 </div>
                 <Button type="button" variant="ghost" size="icon" onClick={closeEditDialog} aria-label="Close edit ticket dialog">
@@ -293,6 +368,30 @@ export function Tickets() {
                     {successMessage}
                   </div>
                 )}
+
+                <div className="grid gap-2">
+                  <Label htmlFor="ticketEvent">Event</Label>
+                  {editingTicket ? (
+                    <div className="flex h-8 items-center rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground">
+                      {editingTicket.events?.title || "Unknown Event"}
+                    </div>
+                  ) : (
+                    <select
+                      id="ticketEvent"
+                      value={formData.eventId}
+                      onChange={(event) => updateField("eventId", event.target.value)}
+                      className="h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      required
+                    >
+                      <option value="">Choose event</option>
+                      {eventOptions.map((event) => (
+                        <option key={event.id} value={event.id}>
+                          {event.title}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="ticketName">Ticket name</Label>
@@ -343,7 +442,7 @@ export function Tickets() {
                     <Input
                       id="ticketQuantity"
                       type="number"
-                      min={editingTicket.sold}
+                      min={editingTicket?.sold ?? 0}
                       value={formData.quantity}
                       onChange={(event) => updateField("quantity", event.target.value)}
                       required
@@ -352,7 +451,7 @@ export function Tickets() {
                   <div className="grid gap-2">
                     <Label>Sold</Label>
                     <div className="flex h-8 items-center rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground">
-                      {editingTicket.sold.toLocaleString("id-ID")}
+                      {(editingTicket?.sold ?? 0).toLocaleString("id-ID")}
                     </div>
                   </div>
                 </div>
