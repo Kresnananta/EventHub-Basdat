@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Building2, CalendarDays, LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode } from "lucide-react"
+import { Building2, CalendarDays, LayoutDashboard, Ticket, ShoppingCart, Users, Settings, PieChart, ChevronsUpDown, QrCode, ShieldCheck } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 
 
@@ -44,6 +44,7 @@ const adminMenuItems = [
   { title: "Events", url: "/dashboard/events", icon: CalendarDays },
   { title: "Orders", url: "/dashboard/orders", icon: ShoppingCart },
   { title: "Venues", url: "/dashboard/venues", icon: Building2 },
+  { title: "Roles", url: "/dashboard/roles", icon: ShieldCheck },
 ]
 
 type EventOption = {
