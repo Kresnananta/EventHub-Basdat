@@ -15,6 +15,7 @@ import { Login } from './pages/Login'
 import { Profile } from './pages/Profile'
 import { MyTickets } from './pages/MyTickets'
 import { TicketDetail } from './pages/TicketDetail'
+import { Payment } from './pages/Payment'
 import { CheckIn } from './pages/CheckIn'
 import { CreateEvent } from './pages/CreateEvent'
 import { EditEvent } from './pages/EditEvent'
@@ -35,6 +36,7 @@ function App() {
           <Route path='/my-tickets' element={<MyTickets />} />
           <Route path='/my-tickets/:ticketId' element={<TicketDetail />} />
           <Route path='/ticket/:ticketId' element={<TicketDetail />} />
+          <Route path='/payment/:orderId' element={<Payment />} />
           <Route path='/profile' element={<Profile />} />
 
           <Route element={<ProtectedRoute />}>

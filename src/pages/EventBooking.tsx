@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { ArrowLeft, Check, Loader2 } from "lucide-react"
+import { Armchair, ArrowLeft, Check, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { useAuth } from '@/context/AuthContext'
 
@@ -15,6 +15,37 @@ interface BookingData {
   email: string
   phone: string
   quantity: number
+}
+
+interface SeatOption {
+  seat_id: string
+  seat_number: string
+  status: string
+}
+
+function getBookedOrderId(data: unknown): string | null {
+  if (typeof data === 'string') return data
+
+  if (Array.isArray(data)) {
+    return getBookedOrderId(data[0])
+  }
+
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    const orderId = record.order_id || record.orderId || record.id
+
+    if (typeof orderId === 'string') {
+      return orderId
+    }
+  }
+
+  return null
+}
+
+function getPaymentExpiry() {
+  const expiresAt = new Date()
+  expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+  return expiresAt.toISOString()
 }
 
 // const eventData: Record<string, any> = {
@@ -61,6 +92,8 @@ export function EventBooking() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [seats, setSeats] = useState<SeatOption[]>([])
+  const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([])
 
   const [event, setEvent] = useState<any>(null)
   const [ticket, setTicket] = useState<any>(null)
@@ -115,6 +148,17 @@ useEffect(() => {
               price: matchedTicket.price || 0,
               priceFormatted: `Rp ${(matchedTicket.price || 0).toLocaleString('id-ID')}`
             })
+
+            const { data: seatData, error: seatError } = await supabase.rpc('get_ticket_tier_seats', {
+              p_tier_id: matchedTicket.id
+            })
+
+            if (seatError) {
+              console.error('Failed to load seats:', seatError)
+              setSeats([])
+            } else {
+              setSeats((seatData ?? []) as SeatOption[])
+            }
           }
         }
       }
@@ -154,7 +198,9 @@ useEffect(() => {
     )
   }
 
-  const totalPrice = ticket.price * formData.quantity
+  const hasSeatSelection = seats.length > 0
+  const bookingQuantity = hasSeatSelection ? selectedSeatIds.length : formData.quantity
+  const totalPrice = ticket.price * bookingQuantity
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -169,10 +215,12 @@ useEffect(() => {
 
       const parsedValue = parseInt(value);
       if (!isNaN(parsedValue)) {
+        const normalizedQuantity = Math.min(10, Math.max(1, parsedValue))
         setFormData(prev => ({
           ...prev,
-          [name]: Math.min(10, parsedValue)
+          [name]: normalizedQuantity
         }));
+        setSelectedSeatIds(prev => prev.slice(0, normalizedQuantity))
       }
 
     } else {
@@ -181,6 +229,22 @@ useEffect(() => {
         [name]: value
       }));
     }
+  }
+
+  const toggleSeat = (seat: SeatOption) => {
+    if (seat.status !== 'available') return
+
+    setSelectedSeatIds(prev => {
+      if (prev.includes(seat.seat_id)) {
+        return prev.filter(id => id !== seat.seat_id)
+      }
+
+      if (prev.length >= 10) {
+        return prev
+      }
+
+      return [...prev, seat.seat_id]
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,19 +263,24 @@ useEffect(() => {
     }
 
     if (formData.firstName && formData.lastName && formData.email && formData.phone) {
+      if (hasSeatSelection && selectedSeatIds.length === 0) {
+        alert("Silakan pilih minimal 1 kursi terlebih dahulu.")
+        return
+      }
 
       setIsSubmitting(true)
 
       try {
-        const qty = Number(formData.quantity) || 1
-        const totalAmount = totalPrice * qty
+        const qty = hasSeatSelection ? selectedSeatIds.length : Number(formData.quantity) || 1
+        const totalAmount = ticket.price * qty
 
         const { data, error } = await supabase.rpc('book_ticket', {
           p_buyer_id: session.user.id,
           p_event_id: eventId,
           p_tier_id: ticketTypeId,
           p_quantity: qty,
-          p_total_amount: totalAmount
+          p_total_amount: totalAmount,
+          p_seat_ids: hasSeatSelection ? selectedSeatIds : null
         })
 
         if (error) {
@@ -219,7 +288,34 @@ useEffect(() => {
           alert('Gagal memproses tiket:\n' + error.message)
         } else {
           console.log('Success Booking:', data)
-          setStep('confirmation')
+          const orderId = getBookedOrderId(data)
+
+          if (orderId) {
+            const { data: paymentSetup, error: paymentSetupError } = await supabase
+              .from('orders')
+              .update({
+                status: 'pending',
+                payment_method: null,
+                payment_ref: null,
+                paid_at: null,
+                expires_at: getPaymentExpiry(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', orderId)
+              .eq('buyer_id', session.user.id)
+              .select('id, status, expires_at, payment_method, payment_ref')
+              .maybeSingle()
+
+            if (paymentSetupError) {
+              console.error('Payment Setup Error:', paymentSetupError)
+            } else if (!paymentSetup) {
+              console.warn('Payment setup did not update any order. The payment page will use demo-pending mode.', { orderId })
+            }
+
+            navigate(`/payment/${orderId}`)
+          } else {
+            setStep('confirmation')
+          }
         }
       } catch (err: any) {
         alert('Connection error:' + err.message)
@@ -406,24 +502,82 @@ useEffect(() => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Number of Tickets *</label>
-                    <Input
-                      name="quantity"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={formData.quantity}
-                      onChange={handleInputChange}
-                      required
-                      className="border-border/50"
-                    />
-                    <p className="text-xs text-muted-foreground">Maximum 10 tickets per booking</p>
-                  </div>
+                  {!hasSeatSelection && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Number of Tickets *</label>
+                      <Input
+                        name="quantity"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={formData.quantity}
+                        onChange={handleInputChange}
+                        required
+                        className="border-border/50"
+                      />
+                      <p className="text-xs text-muted-foreground">Maximum 10 tickets per booking</p>
+                    </div>
+                  )}
+
+                  {hasSeatSelection && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+                          <Armchair size={16} />
+                          Select Seats *
+                        </label>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {selectedSeatIds.length} selected
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
+                        {seats.map((seat) => {
+                          const selected = selectedSeatIds.includes(seat.seat_id)
+                          const unavailable = seat.status !== 'available'
+
+                          return (
+                            <button
+                              key={seat.seat_id}
+                              type="button"
+                              onClick={() => toggleSeat(seat)}
+                              disabled={unavailable}
+                              className={`flex h-10 items-center justify-center rounded-md border text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${
+                                selected
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : unavailable
+                                    ? 'cursor-not-allowed border-border bg-muted text-muted-foreground opacity-60'
+                                    : 'border-border bg-white text-foreground hover:border-primary/60 hover:bg-primary/5'
+                              }`}
+                              aria-pressed={selected}
+                            >
+                              {seat.seat_number}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-3 w-3 rounded-sm border border-border bg-white" />
+                          Available
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-3 w-3 rounded-sm bg-primary" />
+                          Selected
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-3 w-3 rounded-sm bg-muted" />
+                          Reserved/Paid
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Select up to 10 seats. Ticket quantity follows the selected seats.</p>
+                    </div>
+                  )}
 
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (hasSeatSelection && selectedSeatIds.length === 0)}
                     className="w-full font-medium shadow-sm mt-6 cursor-pointer"
                   >
                     {isSubmitting ? (
@@ -463,8 +617,21 @@ useEffect(() => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Quantity:</span>
-                      <span className="font-medium text-foreground">{formData.quantity}</span>
+                      <span className="font-medium text-foreground">{bookingQuantity}</span>
                     </div>
+                    {hasSeatSelection && (
+                      <div className="flex justify-between gap-3 text-sm">
+                        <span className="text-muted-foreground">Seats:</span>
+                        <span className="text-right font-medium text-foreground">
+                          {selectedSeatIds.length > 0
+                            ? selectedSeatIds
+                              .map(id => seats.find(seat => seat.seat_id === id)?.seat_number)
+                              .filter(Boolean)
+                              .join(', ')
+                            : '-'}
+                        </span>
+                      </div>
+                    )}
                     <div className="border-t border-border pt-3 flex justify-between">
                       <span className="font-semibold text-foreground">Total:</span>
                       <span className="text-lg font-bold text-primary">
