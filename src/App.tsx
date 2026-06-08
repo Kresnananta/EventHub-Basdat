@@ -20,6 +20,7 @@ import { CreateEvent } from './pages/CreateEvent'
 import { EditEvent } from './pages/EditEvent'
 import { Venues } from './pages/Venues'
 import { NotFound } from './pages/NotFound'
+import { RoleManagement } from './pages/RoleManagement'
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
               <Route path='check-in' element={<CheckIn />} />
               <Route element={<AdminRoute />}>
                 <Route path='venues' element={<Venues />} />
+                <Route path='roles' element={<RoleManagement />} />
               </Route>
             </Route>
           </Route>

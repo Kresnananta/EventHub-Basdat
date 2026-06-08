@@ -9,14 +9,19 @@ export async function getScopedEventIds({
   selectedEventId: string | null
   userId: string | null | undefined
 }) {
-  if (selectedEventId) return [selectedEventId]
-  if (role === "admin") return null
+  if (role === "admin") return selectedEventId ? [selectedEventId] : null
   if (!userId) return []
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("events")
     .select("id")
     .eq("organizer_id", userId)
+
+  if (selectedEventId) {
+    query = query.eq("id", selectedEventId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Failed to resolve dashboard event scope:", error)

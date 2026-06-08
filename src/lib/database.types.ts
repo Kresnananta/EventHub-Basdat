@@ -425,6 +425,13 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_update_profile_role: {
+        Args: {
+          p_profile_id: string
+          p_role: string
+        }
+        Returns: Database["public"]["Tables"]["profiles"]["Row"]
+      }
     }
     Enums: {
       [_ in never]: never
