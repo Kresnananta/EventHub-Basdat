@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { getScopedEventIds } from "@/lib/dashboard-scope"
 // Data Dummy Pengunjung
 // const dummyAttendees = [
 //   { id: "ATT-001", name: "Natasha Romanoff", email: "nat@avengers.com", ticketType: "VIP Seating", event: "Google I/O 2026", checkedIn: true, time: "08:30 AM" },
@@ -21,32 +23,47 @@ export function Attendees() {
   const [loading, setLoading] = useState(true)
   const [attendees, setAttendees] = useState<any[]>([])
   const { selectedEventId } = useEventContext()
+  const { profile, user } = useAuth()
 
   async function fetchAttendees() {
     setLoading(true)
+
+    const scopedEventIds = await getScopedEventIds({
+      role: profile?.role,
+      selectedEventId,
+      userId: user?.id,
+    })
+
+    if (scopedEventIds?.length === 0) {
+      setAttendees([])
+      setLoading(false)
+      return
+    }
 
     let query = supabase
       .from('tickets')
       .select(`
       id, ticket_code, status, checked_in_at,
       profiles ( full_name, phone ),
-      ticket_tiers( name, event_id, events( title ) )
+      ticket_tiers!inner( name, event_id, events( title ) )
     `)
       .order('created_at', { ascending: false })
+
+    if (scopedEventIds) {
+      query = query.in('ticket_tiers.event_id', scopedEventIds)
+    }
 
     const { data, error } = await query
 
     if (error) {
       console.error("Error fetching attendees:", error)
+      setAttendees([])
+      setLoading(false)
+      return
     }
 
     if (data) {
-      let rawData = data;
-
-      if (selectedEventId) {
-        rawData = rawData.filter((item: any) => item.ticket_tiers?.event_id === selectedEventId)
-      }
-      const formattedAttendees = rawData.map((item: any) => ({
+      const formattedAttendees = data.map((item: any) => ({
         id: item.ticket_code,
         rawId: item.id,
         name: item.profiles?.full_name || "Unknown Attendee",
@@ -62,7 +79,7 @@ export function Attendees() {
   }
   useEffect(() => {
     fetchAttendees()
-  }, [selectedEventId])
+  }, [profile?.role, selectedEventId, user?.id])
 
   const handleCheckIn = async (ticketId: string) => {
     // Tembak perintah Update ke Supabase

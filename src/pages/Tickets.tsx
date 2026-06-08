@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Plus, MoreHorizontal, Loader2 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { getScopedEventIds } from "@/lib/dashboard-scope"
 
 // const ticketTiers = [
 //     { id: "T-001", eventName: "Google I/O 2026", name: "VIP Seating", price: "Rp 1,500K", capacity: 100, sold: 85, status: "Selling Fast" },
@@ -18,31 +20,48 @@ export function Tickets() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedEventId, selectedEventName } = useEventContext();
+  const { profile, user } = useAuth()
 
   useEffect(() => {
     async function fetchTickets() {
       setLoading(true)
 
+      const scopedEventIds = await getScopedEventIds({
+        role: profile?.role,
+        selectedEventId,
+        userId: user?.id,
+      })
+
+      if (scopedEventIds?.length === 0) {
+        setTickets([])
+        setLoading(false)
+        return
+      }
+
       let query = supabase
         .from('ticket_tiers')
         .select(`
-                    id, name, price, quantity, sold, currency,
+                    id, event_id, name, price, quantity, sold, currency,
                     events ( title )
                 `)
         .order('created_at', { ascending: false })
-      if (selectedEventId) {
-        query = query.eq('event_id', selectedEventId)
+
+      if (scopedEventIds) {
+        query = query.in('event_id', scopedEventIds)
       }
 
       const { data, error } = await query
       if (error) {
         console.error("Error fetching tickets:", error)
+        setTickets([])
+        setLoading(false)
+        return
       }
-      if (data) setTickets(data)
+      setTickets(data ?? [])
       setLoading(false)
     }
     fetchTickets()
-  }, [selectedEventId])
+  }, [profile?.role, selectedEventId, user?.id])
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -57,7 +76,7 @@ export function Tickets() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Active Ticket Categories: {selectedEventName === "All Event" ? "Seluruh Event" : selectedEventName}</CardTitle>
+          <CardTitle>Active Ticket Categories: {selectedEventName === "All Event" ? "Your Events" : selectedEventName}</CardTitle>
           <CardDescription>Manage ticket tiers and sales of your event</CardDescription>
         </CardHeader>
         <CardContent>
