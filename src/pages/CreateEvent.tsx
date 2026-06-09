@@ -329,7 +329,7 @@ export function CreateEvent() {
         }
       }
 
-      navigate(status === "published" ? `/event/${createdEvent.id}` : "/dashboard")
+      navigate(status === "published" ? `/event/${eventSlug}` : "/dashboard")
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "Event failed to be saved."))
     } finally {

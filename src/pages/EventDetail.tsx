@@ -130,16 +130,20 @@ export function EventDetail() {
 
   useEffect(() => {
     async function fetchEventDetails() {
-  if (!slug) return;
+      if (!slug) return
 
-  const { data, error } = await supabase
-    .from('events')
-    .select(`id, title, description, starts_at, banner_url,
+      const eventIdentifierColumn = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(slug)
+        ? 'id'
+        : 'slug'
+
+      const { data, error } = await supabase
+        .from('events')
+        .select(`id, title, description, starts_at, banner_url,
           venue:venues!events_venue_id_fkey ( id, name, address, city, capacity ),
           ticket_tiers ( id, name, price, quantity, sold )`)
-    .eq('slug', slug)  // ← jadi ini
-    .eq('status', 'published')
-    .single()
+        .eq(eventIdentifierColumn, slug)
+        .eq('status', 'published')
+        .single()
 
       if (error) {
         console.error("Error fetching event details:", error)
@@ -152,7 +156,7 @@ export function EventDetail() {
         const mappedTicketTypes: TicketType[] = [];
 
         if (data.ticket_tiers && Array.isArray(data.ticket_tiers)) {
-          data.ticket_tiers.forEach((t: any) => {
+          data.ticket_tiers.forEach((t) => {
             const capacity = t.quantity || 0;
             const sold = t.sold || 0;
             const available = Math.max(0, capacity - sold);
