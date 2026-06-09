@@ -18,6 +18,7 @@ interface Event {
   attendees: number
   ticketsSold: number
   category: string
+  slug: string
 }
 
 // const events: Event[] = [
@@ -82,7 +83,7 @@ export function Landing() {
       const { data } = await supabase
         .from('events')
         .select(`
-          id, title, description, starts_at, banner_url,
+          id, slug, title, description, starts_at, banner_url,
           venue:venues!events_venue_id_fkey ( name, city ),
           categories ( name ),
           ticket_tiers ( quantity, sold )
@@ -103,6 +104,7 @@ export function Landing() {
 
           return {
             id: e.id,
+            slug: e.slug,
             name: e.title || "Untitled Event",
             description: e.description || "",
             date: new Date(e.starts_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -135,8 +137,8 @@ export function Landing() {
     return matchesSearch && matchesCategory && matchesLocation
   })
 
-  const handleEventClick = (eventId: string) => {
-    navigate(`/event/${eventId}`)
+  const handleEventClick = (slug: string) => {
+    navigate(`/event/${slug}`)
   }
 
   return (
@@ -208,7 +210,7 @@ export function Landing() {
               <Card
                 key={event.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
-                onClick={() => handleEventClick(event.id)}
+                onClick={() => handleEventClick(event.slug)}
               >
                 {/* Event Image */}
                 <div className="relative h-48 overflow-hidden bg-muted">
@@ -256,7 +258,7 @@ export function Landing() {
                     className="w-full gap-2 font-medium shadow-sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleEventClick(event.id)
+                      handleEventClick(event.slug)
                     }}
                   >
                     View Details & Book

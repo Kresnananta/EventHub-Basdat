@@ -99,31 +99,32 @@ interface TicketType {
 //     ticketTypes: [
 //       { id: "T-006", name: "General Admission", price: 800000, priceFormatted: "Rp 800K", capacity: 400, available: 180, status: "Available" },
 //       { id: "T-007", name: "Premium", price: 1200000, priceFormatted: "Rp 1,200K", capacity: 150, available: 50, status: "Available" },
-//     ]
+//     ]id, title, description, starts_at, banner_url,
+          //venue:venues!events_venue_id_fkey ( id, name, address, city, capacity ),
+          //ticket_tiers ( id, name, price, quantity, sold )
+
 //   }
 // }
 
 export function EventDetail() {
   const navigate = useNavigate()
-  const { eventId } = useParams<{ eventId: string }>()
+  const { slug } = useParams<{ slug: string }>()
 
   const [event, setEvent] = useState<EventDetails | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchEventDetails() {
-      if (!eventId) return;
+  if (!slug) return;
 
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          id, title, description, starts_at, banner_url,
+  const { data, error } = await supabase
+    .from('events')
+    .select(`id, title, description, starts_at, banner_url,
           venue:venues!events_venue_id_fkey ( id, name, address, city, capacity ),
-          ticket_tiers ( id, name, price, quantity, sold )
-        `)
-        .eq('id', eventId)
-        .eq('status', 'published')
-        .single()
+          ticket_tiers ( id, name, price, quantity, sold )`)
+    .eq('slug', slug)  // ← jadi ini
+    .eq('status', 'published')
+    .single()
 
       if (error) {
         console.error("Error fetching event details:", error)
@@ -176,7 +177,7 @@ export function EventDetail() {
     }
 
     fetchEventDetails()
-  }, [eventId])
+  }, [slug])
 
   if (loading) {
     return (
@@ -209,7 +210,7 @@ export function EventDetail() {
   }
 
   const handleBooking = (ticketTypeId: string) => {
-    navigate(`/booking/${eventId}/${ticketTypeId}`)
+  navigate(`/booking/${event.id}/${ticketTypeId}`)  // tetap pakai id untuk booking
   }
 
   return (

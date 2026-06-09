@@ -74,12 +74,14 @@ export function Profile() {
         .from('avatars')
         .getPublicUrl(filePath)
 
-      setAvatarUrl(data.publicUrl)
+      const freshUrl = `${data.publicUrl}?t=${Date.now()}`
+      setAvatarUrl(freshUrl)
+      
 
       // Update profile
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: data.publicUrl })
+        .update({ avatar_url: freshUrl })
         .eq('id', user.id)
 
       if (updateError) throw updateError
