@@ -21,29 +21,6 @@ type BrowserWithBarcodeDetector = Window & {
   BarcodeDetector?: BarcodeDetectorConstructor
 }
 
-type RuntimeSingleQuery<T> = {
-  single: () => Promise<{ data: T | null; error: unknown }>
-}
-
-type RuntimeFilterQuery<T> = RuntimeSingleQuery<T> & {
-  eq: (column: string, value: string) => RuntimeFilterQuery<T>
-  limit: (count: number) => RuntimeFilterQuery<T>
-  or: (filters: string) => RuntimeFilterQuery<T>
-}
-
-type RuntimeUpdateQuery<T> = {
-  eq: (column: string, value: string) => Promise<{ data: T | null; error: unknown }>
-}
-
-type RuntimeTableQuery<T> = {
-  select: (columns: string) => RuntimeFilterQuery<T>
-  update: (values: Record<string, string | null>) => RuntimeUpdateQuery<T>
-}
-
-type RuntimeSupabase = {
-  from: <T>(table: string) => RuntimeTableQuery<T>
-}
-
 type NestedProfile = {
   full_name: string | null
   phone: string | null
@@ -77,41 +54,20 @@ type TicketLookupRow = {
   ticket_tiers: NestedTicketTier
 }
 
-type TicketBaseRow = {
-  id: string
-  buyer_id: string
-  order_id: string
-  tier_id: string
+type CheckInLookupRow = {
+  ticket_id: string
   ticket_code: string
-  status: string
+  ticket_status: string
   checked_in_at: string | null
-}
-
-type OrderLookupRow = {
-  id: string
-  buyer_id: string
-  event_id: string
-  status: string
+  buyer_name: string | null
+  buyer_phone: string | null
+  order_id: string
+  order_status: string
   total_amount: number
-  ticket_code: string | null
-  ticket_id: string | null
-}
-
-type TicketTierLookupRow = {
-  id: string
   event_id: string
-  name: string | null
-}
-
-type EventLookupRow = {
-  id: string
-  title: string
+  event_title: string
   starts_at: string
-}
-
-type ProfileLookupRow = {
-  full_name: string | null
-  phone: string | null
+  tier_name: string
 }
 
 type CheckInState = "idle" | "valid" | "checked-in" | "warning" | "error"
@@ -122,8 +78,6 @@ type TicketResult = {
   ticket: TicketLookupRow | null
 }
 
-const runtimeSupabase = supabase as unknown as RuntimeSupabase
-
 function extractTicketCode(rawValue: string) {
   const value = rawValue.trim()
 
@@ -133,10 +87,6 @@ function extractTicketCode(rawValue: string) {
   } catch {
     return value
   }
-}
-
-function getCodeVariants(code: string) {
-  return [...new Set([code, code.toUpperCase(), code.toLowerCase()])]
 }
 
 function isPaidOrder(status?: string) {
@@ -176,114 +126,46 @@ function getStatusBadge(ticket: TicketLookupRow) {
   return <Badge variant="secondary">{ticket.status}</Badge>
 }
 
-async function querySingle<T>(table: string, select: string, column: string, value: string) {
-  return runtimeSupabase
-    .from<T>(table)
-    .select(select)
-    .eq(column, value)
-    .limit(1)
-    .single()
-}
-
-async function findTicketByDirectCode(code: string) {
-  const variants = getCodeVariants(code)
-
-  for (const variant of variants) {
-    const byTicketCode = await querySingle<TicketBaseRow>(
-      "tickets",
-      "id, buyer_id, order_id, tier_id, ticket_code, status, checked_in_at",
-      "ticket_code",
-      variant
-    )
-
-    if (byTicketCode.data) return byTicketCode.data
-  }
-
-  const byId = await querySingle<TicketBaseRow>(
-    "tickets",
-    "id, buyer_id, order_id, tier_id, ticket_code, status, checked_in_at",
-    "id",
-    code
-  )
-
-  return byId.data
-}
-
-async function findTicketFromOrderCode(code: string) {
-  const variants = getCodeVariants(code)
-  let matchedOrder: OrderLookupRow | null = null
-
-  for (const variant of variants) {
-    const orderRes = await querySingle<OrderLookupRow>(
-      "orders",
-      "id, buyer_id, event_id, status, total_amount, ticket_code, ticket_id",
-      "ticket_code",
-      variant
-    )
-
-    if (orderRes.data) {
-      matchedOrder = orderRes.data
-      break
-    }
-  }
-
-  if (!matchedOrder) return null
-
-  if (matchedOrder.ticket_id) {
-    const byTicketId = await querySingle<TicketBaseRow>(
-      "tickets",
-      "id, buyer_id, order_id, tier_id, ticket_code, status, checked_in_at",
-      "id",
-      matchedOrder.ticket_id
-    )
-
-    if (byTicketId.data) return byTicketId.data
-  }
-
-  const byOrderId = await querySingle<TicketBaseRow>(
-    "tickets",
-    "id, buyer_id, order_id, tier_id, ticket_code, status, checked_in_at",
-    "order_id",
-    matchedOrder.id
-  )
-
-  return byOrderId.data
-}
-
-async function hydrateTicket(ticket: TicketBaseRow): Promise<TicketLookupRow> {
-  const [profileRes, orderRes, tierRes] = await Promise.all([
-    querySingle<ProfileLookupRow>("profiles", "full_name, phone", "id", ticket.buyer_id),
-    querySingle<OrderLookupRow>("orders", "id, buyer_id, event_id, status, total_amount, ticket_code, ticket_id", "id", ticket.order_id),
-    querySingle<TicketTierLookupRow>("ticket_tiers", "id, event_id, name", "id", ticket.tier_id),
-  ])
-  const eventId = tierRes.data?.event_id || orderRes.data?.event_id
-  const eventRes = eventId
-    ? await querySingle<EventLookupRow>("events", "id, title, starts_at", "id", eventId)
-    : { data: null }
-
+function mapLookupResult(ticket: CheckInLookupRow): TicketLookupRow {
   return {
-    id: ticket.id,
+    id: ticket.ticket_id,
     ticket_code: ticket.ticket_code,
-    status: ticket.status,
+    status: ticket.ticket_status,
     checked_in_at: ticket.checked_in_at,
-    profiles: profileRes.data,
-    orders: orderRes.data
-      ? {
-        id: orderRes.data.id,
-        buyer_id: orderRes.data.buyer_id,
-        event_id: orderRes.data.event_id,
-        status: orderRes.data.status,
-        total_amount: orderRes.data.total_amount,
-      }
-      : null,
-    ticket_tiers: tierRes.data
-      ? {
-        name: tierRes.data.name,
-        event_id: tierRes.data.event_id,
-        events: eventRes.data,
-      }
-      : null,
+    profiles: {
+      full_name: ticket.buyer_name,
+      phone: ticket.buyer_phone,
+    },
+    orders: {
+      id: ticket.order_id,
+      buyer_id: "",
+      event_id: ticket.event_id,
+      status: ticket.order_status,
+      total_amount: ticket.total_amount,
+    },
+    ticket_tiers: {
+      name: ticket.tier_name,
+      event_id: ticket.event_id,
+      events: {
+        id: ticket.event_id,
+        title: ticket.event_title,
+        starts_at: ticket.starts_at,
+      },
+    },
   }
+}
+
+async function fetchTicketForCheckIn(code: string): Promise<CheckInLookupRow | null> {
+  const { data, error } = await supabase
+    .rpc("lookup_ticket_for_check_in", { p_code: code })
+    .maybeSingle()
+
+  if (error) {
+    console.error("Ticket lookup failed:", error)
+    return null
+  }
+
+  return data
 }
 
 export function CheckIn() {
@@ -319,11 +201,11 @@ export function CheckIn() {
     setTicketCode(code)
     setLookupLoading(true)
 
-    const ticketBase = await findTicketByDirectCode(code) || await findTicketFromOrderCode(code)
+    const lookupData = await fetchTicketForCheckIn(code)
 
     setLookupLoading(false)
 
-    if (!ticketBase) {
+    if (!lookupData) {
       setResult({
         state: "error",
         message: "Tiket tidak ditemukan. Pastikan QR/kode tiket benar, atau gunakan kode tiket dari halaman My Tickets.",
@@ -332,7 +214,7 @@ export function CheckIn() {
       return
     }
 
-    const data = await hydrateTicket(ticketBase)
+    const data = mapLookupResult(lookupData)
     const ticketEventId = data.ticket_tiers?.event_id || data.ticket_tiers?.events?.id
 
     if (selectedEventId && ticketEventId !== selectedEventId) {
@@ -382,18 +264,14 @@ export function CheckIn() {
     if (!result.ticket || result.state !== "valid") return
 
     setCheckInLoading(true)
-    const checkedInAt = new Date().toISOString()
-    const { error } = await runtimeSupabase
-      .from<TicketLookupRow>("tickets")
-      .update({
-        status: "used",
-        checked_in_at: checkedInAt,
-      })
-      .eq("id", result.ticket.id)
+    const { data, error } = await supabase
+      .rpc("check_in_ticket", { p_ticket_id: result.ticket.id })
+      .single()
 
     setCheckInLoading(false)
 
-    if (error) {
+    if (error || !data) {
+      console.error("Ticket check-in failed:", error)
       setResult({
         ...result,
         state: "error",
@@ -407,8 +285,8 @@ export function CheckIn() {
       message: "Check-in berhasil.",
       ticket: {
         ...result.ticket,
-        status: "used",
-        checked_in_at: checkedInAt,
+        status: data.ticket_status,
+        checked_in_at: data.checked_in_at,
       },
     })
   }
