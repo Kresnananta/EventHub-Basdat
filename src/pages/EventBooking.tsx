@@ -252,8 +252,9 @@ useEffect(() => {
 
     // error jika user blm terdaftar
     if (!session?.user) {
-      alert("Sesi anda habis atau belum login. Silahkan login.")
-      navigate('/login')
+      const returnTo = `/booking/${eventId}/${ticketTypeId}`
+      window.sessionStorage.setItem('eventhub.authReturnTo', returnTo)
+      navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`)
       return
     }
 

@@ -3,10 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
-import { ArrowLeft, Building2, Calendar, MapPin, Users, Tag, Loader2 } from "lucide-react"
+import { ArrowLeft, Building2, Calendar, LogIn, MapPin, Users, Tag, Loader2, UserRoundPlus } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
+import { useAuth } from "@/context/AuthContext"
 
 interface EventDetails {
   id: string
@@ -109,9 +121,12 @@ interface TicketType {
 export function EventDetail() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
+  const { session } = useAuth()
 
   const [event, setEvent] = useState<EventDetails | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchEventDetails() {
@@ -210,7 +225,29 @@ export function EventDetail() {
   }
 
   const handleBooking = (ticketTypeId: string) => {
-  navigate(`/booking/${event.id}/${ticketTypeId}`)  // tetap pakai id untuk booking
+    const bookingPath = `/booking/${event.id}/${ticketTypeId}`
+
+    if (!session) {
+      setSelectedTicketId(ticketTypeId)
+      setAuthDialogOpen(true)
+      return
+    }
+
+    navigate(bookingPath)
+  }
+
+  const continueToAuth = (mode: 'login' | 'signup') => {
+    if (!selectedTicketId) return
+
+    const bookingPath = `/booking/${event.id}/${selectedTicketId}`
+    window.sessionStorage.setItem('eventhub.authReturnTo', bookingPath)
+
+    const params = new URLSearchParams({ returnTo: bookingPath })
+    if (mode === 'signup') {
+      params.set('mode', 'signup')
+    }
+
+    navigate(`/login?${params.toString()}`)
   }
 
   return (
@@ -360,6 +397,31 @@ export function EventDetail() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-primary/10 text-primary">
+              <UserRoundPlus />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Sign in before booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Login or create an account to select seats and continue with this ticket.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:flex-wrap">
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogAction variant="outline" onClick={() => continueToAuth('login')} className="gap-2">
+              <LogIn size={16} />
+              Login
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => continueToAuth('signup')} className="gap-2">
+              <UserRoundPlus size={16} />
+              Create Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Footer */}
       <Footer />
