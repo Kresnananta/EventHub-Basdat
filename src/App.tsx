@@ -30,15 +30,14 @@ function App() {
         <Routes>
           <Route path='/' element={<Landing />} />
           <Route path='/login' element={<Login />} />
-          <Route path='/event/:eventId' element={<EventDetail />} />
           <Route path='/booking/:eventId/:ticketTypeId' element={<EventBooking />} />
           <Route path='/your-events' element={<Navigate to='/my-tickets' replace />} />
           <Route path='/my-tickets' element={<MyTickets />} />
           <Route path='/my-tickets/:ticketId' element={<TicketDetail />} />
           <Route path='/ticket/:ticketId' element={<TicketDetail />} />
           <Route path='/payment/:orderId' element={<Payment />} />
+          <Route path="/event/:slug" element={<EventDetail />} />
           <Route path='/profile' element={<Profile />} />
-
           <Route element={<ProtectedRoute />}>
             <Route path='/dashboard' element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
