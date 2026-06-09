@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, Navigate } from "react-router-dom"
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom"
 import { supabase } from "@/lib/supabase-client"
 import { ensureUserProfile } from "@/lib/profiles"
 import { useAuth } from "@/context/AuthContext"
@@ -8,12 +8,22 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Ticket, Mail, Lock, ArrowRight } from "lucide-react"
 
-const getAuthRedirectUrl = () => {
-  return `${window.location.origin}/`
+const getSafeReturnTo = (value: string | null) => {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/"
+  }
+
+  return value
+}
+
+const getAuthRedirectUrl = (returnTo: string) => {
+  const params = new URLSearchParams({ returnTo })
+  return `${window.location.origin}/login?${params.toString()}`
 }
 
 export function Login() {
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [isSignUp, setIsSignUp] = useState(() => searchParams.get("mode") === "signup")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -24,6 +34,9 @@ export function Login() {
 
   const navigate = useNavigate()
   const { session } = useAuth()
+  const returnTo = getSafeReturnTo(
+    searchParams.get("returnTo") || window.sessionStorage.getItem("eventhub.authReturnTo")
+  )
 
   const getAuthErrorMessage = (error: unknown) => {
     if (!(error instanceof Error)) return "Authentication failed. Please try again."
@@ -35,9 +48,9 @@ export function Login() {
     return error.message
   }
 
-  // Jika sudah punya sesi, lemparkan dia ke Landing Page (bukan dashboard)
   if (session) {
-    return <Navigate to="/" replace />
+    window.sessionStorage.removeItem("eventhub.authReturnTo")
+    return <Navigate to={returnTo} replace />
   }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -59,7 +72,7 @@ export function Login() {
           password,
           options: {
             data: { full_name: fullName.trim() },
-            emailRedirectTo: getAuthRedirectUrl(),
+            emailRedirectTo: getAuthRedirectUrl(returnTo),
           }
         })
 
@@ -67,9 +80,10 @@ export function Login() {
 
         if (data.user && data.session) {
           await ensureUserProfile(data.user)
-          setSuccessMsg("Akun berhasil dibuat. Mengalihkan ke halaman utama...")
+          setSuccessMsg("Akun berhasil dibuat. Mengalihkan ke halaman booking...")
           setTimeout(() => {
-            navigate("/")
+            window.sessionStorage.removeItem("eventhub.authReturnTo")
+            navigate(returnTo)
           }, 1200)
         } else {
           setSuccessMsg("Registration successful! Please check your email to confirm your account.")
@@ -82,9 +96,10 @@ export function Login() {
         })
         if (error) setErrorMsg("Email or Password wrong")
         else {
-          setSuccessMsg("Mengalihkan ke halaman utama...")
+          setSuccessMsg("Mengalihkan ke halaman booking...")
           setTimeout(() => {
-            navigate("/")
+            window.sessionStorage.removeItem("eventhub.authReturnTo")
+            navigate(returnTo)
           }, 1200)
         }
       }
@@ -100,7 +115,7 @@ export function Login() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: getAuthRedirectUrl()
+        redirectTo: getAuthRedirectUrl(returnTo)
       }
     })
     if (error) setErrorMsg(error.message)

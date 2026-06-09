@@ -479,6 +479,35 @@ export type Database = {
           seat_number: string
         }>
       }
+      lookup_ticket_for_check_in: {
+        Args: {
+          p_code: string
+        }
+        Returns: Array<{
+          ticket_id: string
+          ticket_code: string
+          ticket_status: string
+          checked_in_at: string | null
+          buyer_name: string | null
+          buyer_phone: string | null
+          order_id: string
+          order_status: string
+          total_amount: number
+          event_id: string
+          event_title: string
+          starts_at: string
+          tier_name: string
+        }>
+      }
+      check_in_ticket: {
+        Args: {
+          p_ticket_id: string
+        }
+        Returns: Array<{
+          ticket_status: string
+          checked_in_at: string
+        }>
+      }
       admin_update_profile_role: {
         Args: {
           p_profile_id: string
