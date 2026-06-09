@@ -409,7 +409,7 @@ export function Tickets() {
                     id="ticketDescription"
                     value={formData.description}
                     onChange={(event) => updateField("description", event.target.value)}
-                    placeholder="Benefit atau catatan tiket"
+                    placeholder="Benefits or ticket notes"
                   />
                 </div>
 
